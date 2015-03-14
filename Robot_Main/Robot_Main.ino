@@ -1,6 +1,6 @@
 //Robot Main
 //
-//This sketch drives Alfred.
+//This sketch drives Robie.
 //
 //Programmed by Andy Tracy
 
@@ -19,7 +19,9 @@ Servo steer;
 const int servopin=5;
 
 //Eyeball variables
-const int pingPin = 6;
+Servo look;
+const int lookpin=6;
+const int pingPin = 7;
 long duration, distance, lastdist = 30;
 
 void setup(){
@@ -28,24 +30,23 @@ void setup(){
   pinMode(leftf, OUTPUT);
   pinMode(leftb, OUTPUT);
   pinMode(servopin, OUTPUT);
+  pinMode(lookpin, OUTPUT);
   DriveStop();
   
   steer.attach(servopin); //Attach servo
   steer.writeMicroseconds(1500); //Start servo at 90 degrees
+  look.attach(lookpin); //Attach servo
+  look.writeMicroseconds(1500); //Start servo at 90 degrees
 }
 
 void loop(){
-  //Send out a ping
-  pinMode(pingPin, OUTPUT);
-  digitalWrite(pingPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(pingPin, HIGH);
-  delayMicroseconds(5);
-  digitalWrite(pingPin, LOW);
+  //Look around
+  Look(70);
+  Look(110);
+  Look(90);
   
-  //Pick up the ping
-  pinMode(pingPin, INPUT);
-  duration = pulseIn(pingPin, HIGH);
+  //Send out a ping
+  duration=SendPing();
   
   //Figure out how far we are from an object (in inches)
   distance = duration / 73.746 / 2;
@@ -66,6 +67,28 @@ void loop(){
   //Remember the last distance and wait to take a new reading  
   lastdist=distance;
   delay(500);
+}
+
+long SendPing(){
+  pinMode(pingPin, OUTPUT);
+  digitalWrite(pingPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(pingPin, HIGH);
+  delayMicroseconds(5);
+  digitalWrite(pingPin, LOW);
+  
+  //Pick up the ping
+  pinMode(pingPin, INPUT);
+  return pulseIn(pingPin, HIGH);
+}
+
+void Look(int pos){ //Turns the servo to the given angle in degrees
+  pos=pos*10+685; //Convert angle to microseconds
+  
+  if(pos>1100 && pos<=2100){ //If the angle is acceptable
+    look.writeMicroseconds(pos); //Send it to the servo
+    delay(150);
+  }
 }
 
 void Turn(int pos){ //Turns the servo to the given angle in degrees
