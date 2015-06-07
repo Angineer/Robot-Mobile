@@ -9,18 +9,18 @@
 
 //Drive motor variables
 //High on rightf = forward on right, etc.
-const int rightf=0;
-const int rightb=1;
-const int leftf=2;
-const int leftb=3;
+const int rightf=2;
+const int rightb=3;
+const int leftf=4;
+const int leftb=5;
 
 //Steering variables
 Servo steer;
-const int servopin=5;
+const int servopin=9;
 
 //Eyeball variables
 Servo look;
-const int lookpin=6;
+const int lookpin=8;
 const int pingPin = 7;
 long duration, distance, lastdist = 30;
 
@@ -46,7 +46,8 @@ void loop(){
   Look(90);
   
   //Send out a ping
-  duration=SendPing();
+  //duration=SendPing();
+  duration=1000;
   
   //Figure out how far we are from an object (in inches)
   distance = duration / 73.746 / 2;
@@ -83,7 +84,7 @@ long SendPing(){
 }
 
 void Look(int pos){ //Turns the servo to the given angle in degrees
-  pos=pos*10+685; //Convert angle to microseconds
+  pos=pos*10+580; //Convert angle to microseconds
   
   if(pos>1100 && pos<=2100){ //If the angle is acceptable
     look.writeMicroseconds(pos); //Send it to the servo
