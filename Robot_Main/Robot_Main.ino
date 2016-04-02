@@ -14,11 +14,7 @@ const int rightb=2;
 const int leftf=5;
 const int leftb=4;
 
-int speed=100; //Speed for forward driving, 0-255
-
-//Steering variables
-Servo steer;
-const int servopin=10;
+int baseSpeed=100; //Max speed for forward driving, 0-255
 
 //Eyeball variables
 Servo look;
@@ -33,12 +29,9 @@ void setup(){
   pinMode(rightb, OUTPUT);
   pinMode(leftf, OUTPUT);
   pinMode(leftb, OUTPUT);
-  pinMode(servopin, OUTPUT); // Set servo control pins to output mode
-  pinMode(lookpin, OUTPUT);
+  pinMode(lookpin, OUTPUT); // Set servo control pin to output mode
   DriveStop(); // Start with all motors off
   
-  steer.attach(servopin); //Attach drive servo
-  Turn(90); //Start servo at 90 degrees
   look.attach(lookpin); //Attach eyeball servo
   Look(90); //Start servo at 90 degrees
   Serial.println("Starting up...");
@@ -88,27 +81,30 @@ void Look(int pos){ //Turns the servo to the given angle in degrees
   delay(250);
 }
 
-void Turn(int pos){ //Turns the servo to the given angle in degrees
-  pos=pos*10+580; //Convert angle to microseconds
-  
-  if(pos>1100 && pos<=2100){ //If the angle is acceptable
-    steer.writeMicroseconds(pos); //Send it to the servo
-    delay(150);
-  }
-}
-
-void DriveForward(){ //Forward on both drive motors
-  analogWrite(rightf, speed);
+void DriveForward(int right, int left){ //Drive forward
+  //Inputs are percentage of baseSpeed on respective motor
+  analogWrite(rightf, baseSpeed*(right/100.0));
   digitalWrite(rightb, LOW);
-  analogWrite(leftf, speed);
+  analogWrite(leftf, baseSpeed*(left/100.0));
   digitalWrite(leftb, LOW);
 }
 
-void DriveBackward(){ //Backward on both drive motors
+void DriveBackward(int angle){ //Drive backward
   digitalWrite(rightf, LOW);
-  digitalWrite(rightb, HIGH);
   digitalWrite(leftf, LOW);
-  digitalWrite(leftb, HIGH);
+  
+  if (angle==0){
+    digitalWrite(rightb, HIGH);
+    digitalWrite(leftb, HIGH);
+  }
+  else if (angle>0){
+    digitalWrite(rightb, HIGH);
+    digitalWrite(leftb, LOW);
+  }
+  else{
+    digitalWrite(rightb, LOW);
+    digitalWrite(leftb, HIGH);
+  }
 }
 
 void DriveStop(){ //Stop both drive motors
@@ -127,17 +123,14 @@ void DriveAvoid(int vector[]){
   }
   if (min < 15){
     Serial.println("Object too close; avoiding...");
-    DriveBackward();
-    Turn(60);
-    delay(500);
-    DriveForward();
+    DriveBackward(1);
+    delay(100*random(2, 20));
+    DriveForward(100, 100);
     //DriveStop();
-    Turn(90);
   }
   else{
     Serial.println("Driving randomly...");
-    Turn(60+random(0,3)*30);
-    DriveForward();
+    DriveForward(100, 100);
     //DriveStop();
   }
 }
