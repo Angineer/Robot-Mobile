@@ -116,21 +116,25 @@ void DriveStop(){ //Stop both drive motors
 
 void DriveAvoid(int vector[]){
   int min=1000;
-  for (int i=0; i<=2; i++){
-    if (vector[i]<min){
-      min=vector[i];
-    }
-  }
-  if (min < 15){
+  int closer=0;
+  //for (int i=0; i<=2; i++){
+  //  if (vector[i]<min){
+  //    min=vector[i];
+  //  }
+  //}
+  if (vector[0]<vector[2]) closer=-1;
+  else closer=1;
+  
+  if (vector[1] < 16 || min(vector[0], vector[2]) < 10){
     Serial.println("Object too close; avoiding...");
-    DriveBackward(1);
-    delay(100*random(2, 20));
-    DriveForward(100, 100);
+    DriveBackward(closer);
+    delay(100*random(5, 20));
+    DriveForward(100, 110);
     //DriveStop();
   }
   else{
     Serial.println("Driving randomly...");
-    DriveForward(100, 100);
+    DriveForward(100, 110);
     //DriveStop();
   }
 }
