@@ -1,5 +1,6 @@
 #include <iostream>
 #include <netinet/in.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -47,10 +48,10 @@ class Inventory
 class Manager
 {
     private:
-        //foo
         //Socket communication object
         struct sockaddr_in serv_addr, cli_addr;
         Inventory* inventory;
+
         void dispense_item(unsigned int slot, float quantity);
         void get_robot_state();
         void handle_user_input(std::string command);

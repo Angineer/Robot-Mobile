@@ -1,4 +1,5 @@
-#include "../include/InventoryManager.h"
+#include "../include/communication.h"
+#include "../include/inventory_manager.h"
 
 // Items that will be available for selection
 robot::ItemType apple("apple");

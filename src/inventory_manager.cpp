@@ -1,4 +1,9 @@
-#include "../include/InventoryManager.h"
+#include "../include/inventory_manager.h"
+#include "../include/communication.h"
+
+#define MESSAGE_SIZE 8
+#define UI_SOCKET 5000
+#define DP_SOCKET 5001
 
 namespace robot
 {
@@ -95,30 +100,9 @@ void Manager::handle_user_input(std::string command){
     }
 }
 void Manager::run(){
-    // Create connection to socket and start listening
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    char buffer[256];
-    int n;
+    robot::ServerSock server("localhost", UI_SOCKET);
 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(1111);
-
-    int bind_success = bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
-
-    // Process input from socket forever
-    socklen_t clilen;
-
-    listen(sockfd, 5);
-    clilen = sizeof(cli_addr);
-    int newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-
-    n = read(newsockfd, buffer, 255);
-
-    printf("Here is the message: %s\n",buffer);
-
-    close(newsockfd);
-    close(sockfd);
+    server.serve();
 }
 
 }
