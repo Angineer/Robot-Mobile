@@ -50,6 +50,9 @@ ServerSock::ServerSock(std::string host, int portno) : Socket(host, portno)
     }
 }
 void ServerSock::serve(){
+    pid_t pID;
+    std::signal(SIGCHLD,SIG_IGN); // Let child processes fully die
+
     // Server runs forever
     while (true){
         std::cout << "Listening for connections" << std::endl;
@@ -59,31 +62,40 @@ void ServerSock::serve(){
 
         if (newsockfd > 0){
             std::cout << "Connection established!" << std::endl;
-        }
 
-        // Process data until disconnect
-        bool connect = true;
-        while(connect){
-            memset(buffer, 0, 8); //TODO: Fix message size
+            pID = fork(); // Create child process
 
-            n = read(newsockfd, buffer, 8);
+            if (pID == 0){
+                std::cout << "Child process started!" << std::endl;
+                close(sockfd);
+                // Process data until disconnect
+                bool connect = true;
+                while(connect){
+                    memset(buffer, 0, 8); //TODO: Fix message size
 
-            if (n == 0){
-                connect = false;
+                    n = read(newsockfd, buffer, 8);
+
+                    if (n == 0){
+                        connect = false;
+                    }
+
+                    std::cout << n << std::endl;
+                    std::cout << buffer;
+
+                    // Disconnect
+                    if ((buffer[0] == 'd') || (n == 0)){
+                        close(newsockfd);
+                        std::cout << "Disconnected!" << std::endl;
+                        connect = false;
+                    }
+                }
+                exit(0);
             }
-
-            std::cout << n << std::endl;
-            std::cout << buffer;
-
-            // Disconnect
-            if ((buffer[0] == 'd') || (n == 0)){
+            else{
                 close(newsockfd);
-                std::cout << "Disconnected!" << std::endl;
-                connect = false;
             }
         }
     }
-    close(sockfd);
 }
 
 std::string Message::get_serial(){

@@ -13,23 +13,31 @@ int main(int argc, char *argv[])
 
     while (true){
 
-        printf("Please enter the message: ");
-
-        bzero(buffer,256);
-        fgets(buffer,255,stdin);
-
-        std::string str_message(buffer);
-
-        robot::Command command(str_message);
-
         robot::ClientSock client("localhost", 5000);
         std::cout << "Client created" << std::endl;
         client.connect_client();
         std::cout << "Client connected" << std::endl;
-        client.send((char *)command.get_serial().c_str());
-        std::cout << "Message sent" << std::endl;
-        client.disconnect();
-        std::cout << "Client disconnected" << std::endl;
+        bool connect = true;
+
+        while (connect){
+
+            printf("Please enter the message: ");
+
+            bzero(buffer,256);
+            fgets(buffer,255,stdin);
+
+            std::string str_message(buffer);
+            robot::Command command(str_message);
+
+            client.send((char *)command.get_serial().c_str());
+            std::cout << "Message sent" << std::endl;
+
+            if (buffer[0] == 'd'){
+                client.disconnect();
+                connect = false;
+                std::cout << "Client disconnected" << std::endl;
+            }
+        }
     }
     /*
     int sockfd, portno, n;
