@@ -94,15 +94,22 @@ Manager::Manager(Inventory* inventory){
 void Manager::dispense_item(unsigned int slot, float quantity){
     std::cout << "Dispensing item!" << std::endl;
 }
-void Manager::handle_user_input(std::string command){
-    if (command == "dispense"){
+void Manager::handle_input(char* input){
+    std::string str_input(input);
+    std::cout << "Input is " + str_input << std::endl;
+    if (str_input == "c2dispense"){
         dispense_item(0, 1);
     }
 }
 void Manager::run(){
-    robot::ServerSock server("localhost", UI_SOCKET);
+    // Create server
+    robot::Server server("localhost", UI_SOCKET);
 
-    server.serve();
+    // Create callback function that can be passed as argument
+    std::function<void(char*)> callback_func(std::bind(&Manager::handle_input, this, std::placeholders::_1));
+
+    // Run server and process callbacks
+    server.serve(callback_func);
 }
 
 }

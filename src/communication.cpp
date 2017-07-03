@@ -17,12 +17,12 @@ Socket::Socket(std::string host, int portno)
     serv_addr.sin_port = htons(portno);
 }
 
-ClientSock::ClientSock(std::string host, int portno) : Socket(host, portno)
+Client::Client(std::string host, int portno) : Socket(host, portno)
 {
     server = gethostbyname(host.c_str());
     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
 }
-void ClientSock::connect_client(){
+void Client::connect_client(){
 
     int connect_success = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
 
@@ -30,16 +30,16 @@ void ClientSock::connect_client(){
         std::cout << "ERROR connecting to server!" << std::endl;
     }
 }
-void ClientSock::send(char* buffer){
+void Client::send(char* buffer){
     n = write(sockfd, buffer, strlen(buffer));
     if (n < 0)
          std::cout << "ERROR writing to socket" << std::endl;
 }
-void ClientSock::disconnect(){
+void Client::disconnect(){
     close(sockfd);
 }
 
-ServerSock::ServerSock(std::string host, int portno) : Socket(host, portno)
+Server::Server(std::string host, int portno) : Socket(host, portno)
 {
     serv_addr.sin_addr.s_addr = INADDR_ANY;
 
@@ -49,7 +49,7 @@ ServerSock::ServerSock(std::string host, int portno) : Socket(host, portno)
         std::cout << "ERROR binding to socket!" << std::endl;
     }
 }
-void ServerSock::serve(){
+void Server::serve(std::function<void(char*)> callback_func){
     pid_t pID;
     std::signal(SIGCHLD,SIG_IGN); // Let child processes fully die
 
@@ -71,22 +71,21 @@ void ServerSock::serve(){
                 // Process data until disconnect
                 bool connect = true;
                 while(connect){
-                    memset(buffer, 0, 8); //TODO: Fix message size
+                    // Clear buffer
+                    memset(buffer, 0, 32); //TODO: Fix message size
 
-                    n = read(newsockfd, buffer, 8);
+                    // Read input from socket
+                    n = read(newsockfd, buffer, 32);
 
-                    if (n == 0){
-                        connect = false;
-                    }
-
-                    std::cout << n << std::endl;
-                    std::cout << buffer;
-
-                    // Disconnect
+                    // Check for disconnect
                     if ((buffer[0] == 'd') || (n == 0)){
                         close(newsockfd);
                         std::cout << "Disconnected!" << std::endl;
                         connect = false;
+                    }
+                    else{
+                        // Call callback using input
+                        callback_func(buffer);
                     }
                 }
                 exit(0);

@@ -1,3 +1,4 @@
+#include <functional>
 #include <iostream>
 #include <netinet/in.h>
 #include <string.h>
@@ -54,8 +55,7 @@ class Manager
 
         void dispense_item(unsigned int slot, float quantity);
         void get_robot_state();
-        void handle_user_input(std::string command);
-        void handle_dispatch_input();
+        void handle_input(char* input);
         void process_order();
     public:
         Manager(Inventory* inventory);

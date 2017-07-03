@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
 
     while (true){
 
-        robot::ClientSock client("localhost", 5000);
+        robot::Client client("localhost", 5000);
         std::cout << "Client created" << std::endl;
         client.connect_client();
         std::cout << "Client connected" << std::endl;

@@ -1,5 +1,6 @@
-#include <iostream>
 #include <csignal>
+#include <functional>
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -23,25 +24,25 @@ class Socket
         Socket(std::string host, int portno);
 };
 
-class ClientSock: public Socket
+class Client: public Socket
 {
     private:
         struct hostent *server;
     public:
-        ClientSock(std::string host, int portno);
+        Client(std::string host, int portno);
         void connect_client();
         void disconnect();
         void send(char* buffer);
 };
 
-class ServerSock: public Socket
+class Server: public Socket
 {
     private:
         struct sockaddr_in cli_addr;
         socklen_t clilen;
     public:
-        ServerSock(std::string host, int portno);
-        void serve();
+        Server(std::string host, int portno);
+        void serve(std::function<void(char*)> callback_func);
 };
 
 class Message
