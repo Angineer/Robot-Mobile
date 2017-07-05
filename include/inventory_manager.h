@@ -1,3 +1,6 @@
+#ifndef INVENTORY_H
+#define INVENTORY_H
+
 #include <functional>
 #include <iostream>
 #include <netinet/in.h>
@@ -17,6 +20,10 @@ class ItemType
     public:
         ItemType(const std::string& name);
         const std::string& get_name() const;
+        template <class Archive>
+            void serialize(Archive & archive){
+                archive( name );
+            }
 };
 
 class Slot
@@ -56,10 +63,16 @@ class Manager
         void dispense_item(unsigned int slot, float quantity);
         void get_robot_state();
         void handle_input(char* input);
+        void handle_command(std::string command);
+        void handle_order(std::string order);
+        void handle_status(std::string status);
         void process_order();
     public:
         Manager(Inventory* inventory);
         void run();
+        void shutdown();
 };
 
 }
+
+#endif

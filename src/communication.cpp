@@ -47,11 +47,12 @@ Server::Server(std::string host, int portno) : Socket(host, portno)
 
     if (bind_success < 0){
         std::cout << "ERROR binding to socket!" << std::endl;
+        exit(1);
     }
 }
 void Server::serve(std::function<void(char*)> callback_func){
     pid_t pID;
-    std::signal(SIGCHLD,SIG_IGN); // Let child processes fully die
+    std::signal(SIGCHLD, SIG_IGN); // Let child processes fully die
 
     // Server runs forever
     while (true){
@@ -78,7 +79,7 @@ void Server::serve(std::function<void(char*)> callback_func){
                     n = read(newsockfd, buffer, 32);
 
                     // Check for disconnect
-                    if ((buffer[0] == 'd') || (n == 0)){
+                    if ((n == 0)){
                         close(newsockfd);
                         std::cout << "Disconnected!" << std::endl;
                         connect = false;
@@ -96,21 +97,28 @@ void Server::serve(std::function<void(char*)> callback_func){
         }
     }
 }
+void Server::shutdown(){
+    close(sockfd);
+}
 
 std::string Message::get_serial(){
     return this->serial;
 }
 
 Command::Command(std::string command){
-    this->size = sizeof(command);
-    std::string size_str = std::to_string(size);
-    this->serial = "c" + size_str + command;
+    this->serial = "c" + command;
 }
 
-Order::Order(){
-    this->size = 8;
-    std::string size_str = std::to_string(size);
-    this->serial = "o" + size_str + "1a";
+Order::Order(ItemType item, int quantity){
+    std::stringstream ss;
+
+    {
+        cereal::BinaryOutputArchive oarchive(ss); // Create an output archive
+
+        oarchive(item, quantity); // Write the data to the archive
+    }
+
+    this->serial = ss.str();
 }
 
 Status::Status(){

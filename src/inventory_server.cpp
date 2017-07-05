@@ -21,6 +21,12 @@ void check_slot_quant(unsigned char slot){
     std::cout << quant << std::endl;
 }
 
+void shutdown(int signum){
+    manager.shutdown();
+    std::cout << "\nStopping Inventory Manager" << std::endl;
+    exit(0);
+}
+
 int main()
 {
     std::cout << "Starting Inventory Manager" << std::endl;
@@ -29,6 +35,9 @@ int main()
     base.change_slot_type(0, &apple);
     base.change_slot_type(1, &cracker);
     base.change_slot_type(2, &granola);
+
+    // Kill manager gracefully on ctrl+c
+    std::signal(SIGINT, shutdown);
 
     // Run forever
     manager.run();

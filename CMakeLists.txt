@@ -3,6 +3,9 @@ project (Robot)
 
 # file(GLOB SOURCE "./src/*.cpp")
 
+set(CEREAL_INCLUDE_FOLDER "../cereal/include" CACHE FILEPATH "Cereal include folder")
+include_directories(${CEREAL_INCLUDE_FOLDER})
+
 add_executable(inventory_server ./src/communication.cpp
                                 ./src/inventory_manager.cpp 
                                 ./src/inventory_server.cpp)

@@ -4,11 +4,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sstream>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+
+#include "cereal/cereal.hpp"
+#include "cereal/archives/binary.hpp"
+#include "cereal/types/string.hpp"
+#include "inventory_manager.h"
 
 namespace robot
 {
@@ -43,6 +49,7 @@ class Server: public Socket
     public:
         Server(std::string host, int portno);
         void serve(std::function<void(char*)> callback_func);
+        void shutdown();
 };
 
 class Message
@@ -64,7 +71,7 @@ class Command: public Message
 class Order: public Message
 {
     public:
-        Order();
+        Order(ItemType item, int quantity);
 };
 
 class Status: public Message

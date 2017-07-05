@@ -1,20 +1,22 @@
 #include "../include/communication.h"
 
-void error(const char *msg)
-{
-    perror(msg);
+robot::Client client("localhost", 5000);
+
+void shutdown(int signum){
+    client.disconnect();
+    std::cout << "\nStopping Test Client" << std::endl;
     exit(0);
 }
 
 int main(int argc, char *argv[])
 {
+    // Kill client gracefully on ctrl+c
+    std::signal(SIGINT, shutdown);
+
     std::cout << "Start" << std::endl;
     char buffer[256];
 
     while (true){
-
-        robot::Client client("localhost", 5000);
-        std::cout << "Client created" << std::endl;
         client.connect_client();
         std::cout << "Client connected" << std::endl;
         bool connect = true;
@@ -31,12 +33,6 @@ int main(int argc, char *argv[])
 
             client.send((char *)command.get_serial().c_str());
             std::cout << "Message sent" << std::endl;
-
-            if (buffer[0] == 'd'){
-                client.disconnect();
-                connect = false;
-                std::cout << "Client disconnected" << std::endl;
-            }
         }
     }
     /*

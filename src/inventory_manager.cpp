@@ -8,6 +8,9 @@
 namespace robot
 {
 
+// Create server
+robot::Server server("localhost", UI_SOCKET);
+
 // Item type
 ItemType::ItemType(const std::string& name){
     this->name = name;
@@ -96,20 +99,55 @@ void Manager::dispense_item(unsigned int slot, float quantity){
 }
 void Manager::handle_input(char* input){
     std::string str_input(input);
-    std::cout << "Input is " + str_input << std::endl;
-    if (str_input == "c2dispense"){
-        dispense_item(0, 1);
+    std::string content = str_input.substr(1, std::string::npos);
+
+    // Strip out newlines
+    size_t newline = content.find('\n');
+    if (newline > 0){
+        content.pop_back();
+    }
+
+    if (input[0] == 'c'){
+        // Command
+        std::cout << "Command received" << std::endl;
+        handle_command(content);
+    }
+    else if (input[0] == 'o'){
+        // Order
+        handle_order(content);
+    }
+    else if (input[0] == 's'){
+        // Status
+        handle_status(content);
     }
 }
+void Manager::handle_command(std::string command){
+    if (command == "status"){
+        std::cout << "Current Status: Great!" << std::endl;
+    }
+}
+void Manager::handle_order(std::string order){
+    //foo
+}
+void Manager::handle_status(std::string status){
+    //foo
+}
 void Manager::run(){
-    // Create server
-    robot::Server server("localhost", UI_SOCKET);
+
+    ItemType apple("apple");
+
+    Order order(apple, 2);
+
+    std::cout << order.get_serial() << std::endl;
 
     // Create callback function that can be passed as argument
     std::function<void(char*)> callback_func(std::bind(&Manager::handle_input, this, std::placeholders::_1));
 
     // Run server and process callbacks
     server.serve(callback_func);
+}
+void Manager::shutdown(){
+    server.shutdown();
 }
 
 }
