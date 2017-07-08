@@ -30,8 +30,20 @@ void Client::connect_client(){
         std::cout << "ERROR connecting to server!" << std::endl;
     }
 }
-void Client::send(char* buffer){
-    n = write(sockfd, buffer, strlen(buffer));
+void Client::send(std::string message){
+    // TODO: expand for messages of more than MSG_LENGTH bytes
+
+    // First send the message length
+    len = message.length();
+
+    memcpy(buffer, &len, sizeof(size_t));
+    n = write(sockfd, buffer, sizeof(size_t));
+    if (n < 0)
+         std::cout << "ERROR writing to socket" << std::endl;
+
+    // Then send the actual message
+    memcpy(buffer, message.c_str(), len);
+    n = write(sockfd, buffer, len);
     if (n < 0)
          std::cout << "ERROR writing to socket" << std::endl;
 }
@@ -50,8 +62,7 @@ Server::Server(std::string host, int portno) : Socket(host, portno)
         exit(1);
     }
 }
-void Server::serve(std::function<void(char*)> callback_func){
-    pid_t pID;
+void Server::serve(std::function<void(char*, int)> callback_func){
     std::signal(SIGCHLD, SIG_IGN); // Let child processes fully die
 
     // Server runs forever
@@ -73,10 +84,18 @@ void Server::serve(std::function<void(char*)> callback_func){
                 bool connect = true;
                 while(connect){
                     // Clear buffer
-                    memset(buffer, 0, 32); //TODO: Fix message size
+                    memset(buffer, 0, MSG_LENGTH);
 
-                    // Read input from socket
-                    n = read(newsockfd, buffer, 32);
+                    // Read length of message from socket
+                    n = read(newsockfd, buffer, sizeof(size_t));
+                    memcpy(&len, buffer, sizeof(size_t));
+                    if (n < 0)
+                        std::cout << "ERROR reading from socket!" << std::endl;
+
+                    // Then read message
+                    n = read(newsockfd, buffer, len);
+                    if (n < 0)
+                        std::cout << "ERROR reading from socket!" << std::endl;
 
                     // Check for disconnect
                     if ((n == 0)){
@@ -86,7 +105,7 @@ void Server::serve(std::function<void(char*)> callback_func){
                     }
                     else{
                         // Call callback using input
-                        callback_func(buffer);
+                        callback_func(buffer, len);
                     }
                 }
                 exit(0);
@@ -110,15 +129,15 @@ Command::Command(std::string command){
 }
 
 Order::Order(ItemType item, int quantity){
-    std::stringstream ss;
-
     {
         cereal::BinaryOutputArchive oarchive(ss); // Create an output archive
 
         oarchive(item, quantity); // Write the data to the archive
     }
 
-    this->serial = ss.str();
+    std::string serial_str = ss.str();
+
+    this->serial = "o" + serial_str;
 }
 
 Status::Status(){

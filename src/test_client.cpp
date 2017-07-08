@@ -1,4 +1,5 @@
 #include "../include/communication.h"
+#include "../include/inventory_manager.h"
 
 robot::Client client("localhost", 5000);
 
@@ -23,15 +24,22 @@ int main(int argc, char *argv[])
 
         while (connect){
 
-            printf("Please enter the message: ");
+            printf("Item type: ");
+            bzero(buffer,64);
+            fgets(buffer,63,stdin);
+            std::string item_name(buffer);
 
-            bzero(buffer,256);
-            fgets(buffer,255,stdin);
+            printf("Quantity: ");
+            bzero(buffer,64);
+            fgets(buffer,63,stdin);
+            std::string quant_str(buffer);
+            int quant = stoi(quant_str);
 
-            std::string str_message(buffer);
-            robot::Command command(str_message);
+            robot::ItemType item_type(item_name);
 
-            client.send((char *)command.get_serial().c_str());
+            robot::Order order(item_type, quant);
+
+            client.send(order.get_serial());
             std::cout << "Message sent" << std::endl;
         }
     }

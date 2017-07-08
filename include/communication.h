@@ -1,3 +1,6 @@
+#ifndef COMMUNICATION_H
+#define COMMUNICATION_H
+
 #include <csignal>
 #include <functional>
 #include <iostream>
@@ -16,6 +19,8 @@
 #include "cereal/types/string.hpp"
 #include "inventory_manager.h"
 
+#define MSG_LENGTH 256
+
 namespace robot
 {
 
@@ -25,7 +30,8 @@ class Socket
         int sockfd, portno, n;
         struct sockaddr_in serv_addr;
         struct hostent *server;
-        char buffer[256];
+        char buffer[MSG_LENGTH]; // Message buffer
+        size_t len; // Length of message
     public:
         Socket(std::string host, int portno);
 };
@@ -38,7 +44,7 @@ class Client: public Socket
         Client(std::string host, int portno);
         void connect_client();
         void disconnect();
-        void send(char* buffer);
+        void send(std::string message);
 };
 
 class Server: public Socket
@@ -46,18 +52,18 @@ class Server: public Socket
     private:
         struct sockaddr_in cli_addr;
         socklen_t clilen;
+        pid_t pID;
     public:
         Server(std::string host, int portno);
-        void serve(std::function<void(char*)> callback_func);
+        void serve(std::function<void(char*, int)> callback_func);
         void shutdown();
 };
 
 class Message
 {
     protected:
-        char size;
+        std::stringstream ss;
         std::string serial;
-
     public:
         std::string get_serial();
 };
@@ -81,3 +87,5 @@ class Status: public Message
 };
 
 }
+
+#endif

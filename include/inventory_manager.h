@@ -13,11 +13,15 @@
 namespace robot
 {
 
+// Forward declarations
+class Server;
+
 class ItemType
 {
     private:
         std::string name;
     public:
+        ItemType();
         ItemType(const std::string& name);
         const std::string& get_name() const;
         template <class Archive>
@@ -59,16 +63,17 @@ class Manager
         //Socket communication object
         struct sockaddr_in serv_addr, cli_addr;
         Inventory* inventory;
+        Server* server;
 
         void dispense_item(unsigned int slot, float quantity);
         void get_robot_state();
-        void handle_input(char* input);
-        void handle_command(std::string command);
-        void handle_order(std::string order);
-        void handle_status(std::string status);
+        void handle_input(char* input, int len);
+        void handle_command(char* input, int len);
+        void handle_order(char* input, int len);
+        void handle_status(char* input, int len);
         void process_order();
     public:
-        Manager(Inventory* inventory);
+        Manager(Inventory* inventory, Server* server);
         void run();
         void shutdown();
 };

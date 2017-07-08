@@ -1,17 +1,13 @@
 #include "../include/inventory_manager.h"
 #include "../include/communication.h"
 
-#define MESSAGE_SIZE 8
-#define UI_SOCKET 5000
-#define DP_SOCKET 5001
-
 namespace robot
 {
 
-// Create server
-robot::Server server("localhost", UI_SOCKET);
-
 // Item type
+ItemType::ItemType(){
+    // Default constructor for Cereal
+}
 ItemType::ItemType(const std::string& name){
     this->name = name;
 }
@@ -90,64 +86,72 @@ void Inventory::remove_item(unsigned int slot, const ItemType* item, unsigned in
 }
 
 // Manager
-Manager::Manager(Inventory* inventory){
+Manager::Manager(Inventory* inventory, Server* server){
     // Set up inventory
     this->inventory = inventory;
+    this->server = server;
 }
 void Manager::dispense_item(unsigned int slot, float quantity){
     std::cout << "Dispensing item!" << std::endl;
 }
-void Manager::handle_input(char* input){
-    std::string str_input(input);
-    std::string content = str_input.substr(1, std::string::npos);
+void Manager::handle_input(char* input, int len){
+    if (len > 0){
 
-    // Strip out newlines
-    size_t newline = content.find('\n');
-    if (newline > 0){
-        content.pop_back();
-    }
-
-    if (input[0] == 'c'){
-        // Command
-        std::cout << "Command received" << std::endl;
-        handle_command(content);
-    }
-    else if (input[0] == 'o'){
-        // Order
-        handle_order(content);
-    }
-    else if (input[0] == 's'){
-        // Status
-        handle_status(content);
+        if (input[0] == 'c'){
+            // Command
+            std::cout << "Command received" << std::endl;
+            handle_command(input, len);
+        }
+        else if (input[0] == 'o'){
+            // Order
+            std::cout << "Order received" << std::endl;
+            handle_order(input, len);
+        }
+        else if (input[0] == 's'){
+            // Status
+            handle_status(input, len);
+        }
     }
 }
-void Manager::handle_command(std::string command){
+void Manager::handle_command(char* input, int len){
+    std::string command(input);
     if (command == "status"){
         std::cout << "Current Status: Great!" << std::endl;
     }
 }
-void Manager::handle_order(std::string order){
-    //foo
+void Manager::handle_order(char* input, int len){
+    std::stringstream ss;
+    ItemType item;
+    int quantity;
+
+    for (int i = 1; i < len; i++){
+        ss << input[i];
+    }
+
+    {
+        cereal::BinaryInputArchive iarchive(ss); // Create an input archive
+
+        iarchive(item, quantity); // Read the data from the archive
+    }
+
+    std::cout << item.get_name() << std::endl;
+    std::cout << quantity << std::endl;
+
+    std::cout << "Success!" << std::endl;
 }
-void Manager::handle_status(std::string status){
+void Manager::handle_status(char* input, int len){
     //foo
 }
 void Manager::run(){
 
-    ItemType apple("apple");
-
-    Order order(apple, 2);
-
-    std::cout << order.get_serial() << std::endl;
-
     // Create callback function that can be passed as argument
-    std::function<void(char*)> callback_func(std::bind(&Manager::handle_input, this, std::placeholders::_1));
+    std::function<void(char*, int)> callback_func(std::bind(&Manager::handle_input, this, std::placeholders::_1, std::placeholders::_2));
 
     // Run server and process callbacks
-    server.serve(callback_func);
+    server->serve(callback_func);
 }
 void Manager::shutdown(){
-    server.shutdown();
+    this->server->shutdown();
 }
 
 }
