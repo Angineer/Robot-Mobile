@@ -121,8 +121,10 @@ void Manager::handle_command(char* input, int len){
 }
 void Manager::handle_order(char* input, int len){
     std::stringstream ss;
-    ItemType item;
-    int quantity;
+    std::vector<ItemType> items;
+    std::vector<int> quantities;
+
+    std::cout << len << std::endl;
 
     for (int i = 1; i < len; i++){
         ss << input[i];
@@ -131,11 +133,14 @@ void Manager::handle_order(char* input, int len){
     {
         cereal::BinaryInputArchive iarchive(ss); // Create an input archive
 
-        iarchive(item, quantity); // Read the data from the archive
+        iarchive(items, quantities); // Read the data from the archive
     }
 
-    std::cout << item.get_name() << std::endl;
-    std::cout << quantity << std::endl;
+    for (int i=0; i<items.size(); i++){
+
+        std::cout << items[i].get_name() << std::endl;
+        std::cout << quantities[i] << std::endl;
+    }
 
     std::cout << "Success!" << std::endl;
 }

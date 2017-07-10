@@ -17,6 +17,8 @@
 #include "cereal/cereal.hpp"
 #include "cereal/archives/binary.hpp"
 #include "cereal/types/string.hpp"
+#include "cereal/types/vector.hpp"
+
 #include "inventory_manager.h"
 
 #define MSG_LENGTH 256
@@ -77,7 +79,7 @@ class Command: public Message
 class Order: public Message
 {
     public:
-        Order(ItemType item, int quantity);
+        Order(std::vector<ItemType> items, std::vector<int> quantities);
 };
 
 class Status: public Message

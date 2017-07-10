@@ -1,6 +1,8 @@
 #include "../include/communication.h"
 #include "../include/inventory_manager.h"
 
+#include <algorithm>
+
 robot::Client client("localhost", 5000);
 
 void shutdown(int signum){
@@ -24,20 +26,33 @@ int main(int argc, char *argv[])
 
         while (connect){
 
-            printf("Item type: ");
-            bzero(buffer,64);
-            fgets(buffer,63,stdin);
-            std::string item_name(buffer);
+            std::vector<robot::ItemType> items;
+            std::vector<int> quantities;
 
-            printf("Quantity: ");
-            bzero(buffer,64);
-            fgets(buffer,63,stdin);
-            std::string quant_str(buffer);
-            int quant = stoi(quant_str);
+            for (int i=0; i<3; i++){
 
-            robot::ItemType item_type(item_name);
+                printf("Item type: ");
+                bzero(buffer,64);
+                fgets(buffer,63,stdin);
+                std::string item_name(buffer);
 
-            robot::Order order(item_type, quant);
+                // Remove new line
+                item_name.erase(std::remove(item_name.begin(), item_name.end(), '\n'), item_name.end());
+
+                printf("Quantity: ");
+                bzero(buffer,64);
+                fgets(buffer,63,stdin);
+                std::string quant_str(buffer);
+                int quant = stoi(quant_str);
+
+                robot::ItemType item_type(item_name);
+
+                items.push_back(item_type);
+                quantities.push_back(quant);
+
+            }
+
+            robot::Order order(items, quantities);
 
             client.send(order.get_serial());
             std::cout << "Message sent" << std::endl;

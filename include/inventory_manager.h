@@ -4,6 +4,7 @@
 #include <functional>
 #include <iostream>
 #include <netinet/in.h>
+#include <queue>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -14,6 +15,7 @@ namespace robot
 {
 
 // Forward declarations
+class Order;
 class Server;
 
 class ItemType
@@ -60,10 +62,10 @@ class Inventory
 class Manager
 {
     private:
-        //Socket communication object
-        struct sockaddr_in serv_addr, cli_addr;
         Inventory* inventory;
         Server* server;
+        std::queue<Order> queue;
+        int status;
 
         void dispense_item(unsigned int slot, float quantity);
         void get_robot_state();

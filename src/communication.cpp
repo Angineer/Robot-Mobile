@@ -128,11 +128,11 @@ Command::Command(std::string command){
     this->serial = "c" + command;
 }
 
-Order::Order(ItemType item, int quantity){
+Order::Order(std::vector<ItemType> items, std::vector<int> quantities){
     {
         cereal::BinaryOutputArchive oarchive(ss); // Create an output archive
 
-        oarchive(item, quantity); // Write the data to the archive
+        oarchive(items, quantities); // Write the data to the archive
     }
 
     std::string serial_str = ss.str();
