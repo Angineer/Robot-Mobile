@@ -128,11 +128,25 @@ Command::Command(std::string command){
     this->serial = "c" + command;
 }
 
+//Order::Order(){
+//    this->serial = "o";
+//}
 Order::Order(std::vector<ItemType> items, std::vector<int> quantities){
+    this->items = items;
+    this->quantities = quantities;
+}
+int Order::get_count(unsigned int position){
+    return this->quantities[position];
+}
+ItemType Order::get_item(unsigned int position){
+    return this->items[position];
+}
+void Order::serialize(){
+    std::stringstream ss;
     {
         cereal::BinaryOutputArchive oarchive(ss); // Create an output archive
 
-        oarchive(items, quantities); // Write the data to the archive
+        oarchive(this->items, this->quantities); // Write the data to the archive
     }
 
     std::string serial_str = ss.str();

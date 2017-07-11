@@ -199,8 +199,13 @@ void Manager::process_queue(){
     // If robot is ready to go and queue has orders, start processing them
     if (this->status == 0 && this->queue.size() > 0){
         // Pop first order off queue
-        //Order curr_order = this->queue.front();
-        //this->queue.pop_front();
+        Order curr_order = this->queue.front();
+        this->queue.pop_front();
+
+        for (int i=0; i<3; i++){
+            std::cout << curr_order.get_item(i).get_name() << std::endl;
+            std::cout << curr_order.get_count(i) << std::endl;
+        }
 
         // Dispense items
 

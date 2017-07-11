@@ -54,6 +54,7 @@ int main(int argc, char *argv[])
 
             robot::Order order(items, quantities);
 
+            order.serialize();
             client.send(order.get_serial());
             std::cout << "Message sent" << std::endl;
         }

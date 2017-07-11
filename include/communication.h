@@ -64,7 +64,6 @@ class Server: public Socket
 class Message
 {
     protected:
-        std::stringstream ss;
         std::string serial;
     public:
         std::string get_serial();
@@ -78,8 +77,14 @@ class Command: public Message
 
 class Order: public Message
 {
+    private:
+        std::vector<ItemType> items;
+        std::vector<int> quantities;
     public:
         Order(std::vector<ItemType> items, std::vector<int> quantities);
+        int get_count(unsigned int position);
+        ItemType get_item(unsigned int position);
+        void serialize();
 };
 
 class Status: public Message
