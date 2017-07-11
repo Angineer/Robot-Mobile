@@ -84,6 +84,16 @@ class Order: public Message
 
 class Status: public Message
 {
+    /* Status codes:
+     * -99: Unknown error
+     * -2: Battery low
+     * -1: Robot unavailable/powered off
+     * 0: Ready to accept new orders
+     * 1: Delivering order
+     * 2: Waiting for pickup
+     * 3: Returning to base
+     * 4: Dispensing
+     */
     public:
         Status();
 };

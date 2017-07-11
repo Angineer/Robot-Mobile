@@ -37,13 +37,15 @@ class Slot
     private:
         const ItemType* type;
         int count;
+        int reserved_count;
     public:
         Slot();
+        void add_items(int quantity);
         void change_type(const ItemType* new_type);
         const ItemType* get_type() const;
         int get_count() const;
-        void add_items(int quantity);
         void remove_items(int quantity);
+        void reserve(int quantity);
 };
 
 class Inventory
@@ -56,7 +58,9 @@ class Inventory
         void change_slot_type(unsigned int slot, const ItemType* new_type);
         unsigned int get_count(unsigned int slot) const;
         const ItemType* get_item(unsigned int slot) const;
+        int get_slot_count();
         void remove_item(unsigned int slot, const ItemType* item, unsigned int count);
+        void reserve(unsigned int slot, const ItemType* item, unsigned int count);
 };
 
 class Manager
@@ -64,7 +68,7 @@ class Manager
     private:
         Inventory* inventory;
         Server* server;
-        std::queue<Order> queue;
+        std::deque<Order> queue;
         int status;
 
         void dispense_item(unsigned int slot, float quantity);
@@ -73,7 +77,7 @@ class Manager
         void handle_command(char* input, int len);
         void handle_order(char* input, int len);
         void handle_status(char* input, int len);
-        void process_order();
+        void process_queue();
     public:
         Manager(Inventory* inventory, Server* server);
         void run();
