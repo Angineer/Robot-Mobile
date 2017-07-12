@@ -4,6 +4,7 @@
 #include <algorithm>
 
 robot::Client client("localhost", 5000);
+int count_items = 2;
 
 void shutdown(int signum){
     client.disconnect();
@@ -29,7 +30,9 @@ int main(int argc, char *argv[])
             std::vector<robot::ItemType> items;
             std::vector<int> quantities;
 
-            for (int i=0; i<3; i++){
+            printf("-----New order-----\n");
+
+            for (int i=0; i<count_items; i++){
 
                 printf("Item type: ");
                 bzero(buffer,64);

@@ -138,6 +138,9 @@ Order::Order(std::vector<ItemType> items, std::vector<int> quantities){
 int Order::get_count(unsigned int position){
     return this->quantities[position];
 }
+int Order::get_num_components(){
+    return this->items.size();
+}
 ItemType Order::get_item(unsigned int position){
     return this->items[position];
 }

@@ -40,7 +40,10 @@ void Slot::change_type(const ItemType* new_type){
 const ItemType* Slot::get_type() const{
     return this->type;
 }
-int Slot::get_count() const{
+int Slot::get_count_available() const{
+    return this->count - this->reserved_count;
+}
+int Slot::get_count_total() const{
     return this->count;
 }
 void Slot::remove_items(int quantity){
@@ -64,47 +67,26 @@ void Slot::reserve(int quantity){
 Inventory::Inventory(int count_slots){
     slots.resize(count_slots);
 }
-void Inventory::add_item(unsigned int slot, const ItemType* item, unsigned int count){
-    const ItemType* slot_type = slots[slot].get_type();
-
-    if (item == slot_type){
-        slots[slot].add_items(count);
-    }
-    else{
-        std::cout << "This slot isn't of that item type!" << std::endl;
-    }
+void Inventory::add(unsigned int slot, unsigned int count){
+    slots[slot].add_items(count);
 }
 void Inventory::change_slot_type(unsigned int slot, const ItemType* new_type){
     slots[slot].change_type(new_type);
 }
-unsigned int Inventory::get_count(unsigned int slot) const{
-    return slots[slot].get_count();
+unsigned int Inventory::get_count_available(unsigned int slot) const{
+    return slots[slot].get_count_available();
 }
-const ItemType* Inventory::get_item(unsigned int slot) const{
+const ItemType* Inventory::get_type(unsigned int slot) const{
     return slots[slot].get_type();
 }
-int Inventory::get_slot_count(){
+int Inventory::get_num_slots(){
     return slots.size();
 }
-void Inventory::remove_item(unsigned int slot, const ItemType* item, unsigned int count){
-    const ItemType* slot_type = slots[slot].get_type();
-
-    if (item == slot_type){
-        slots[slot].remove_items(count);
-    }
-    else{
-        std::cout << "This slot isn't of that item type!" << std::endl;
-    }
+void Inventory::remove(unsigned int slot, unsigned int count){
+    slots[slot].remove_items(count);
 }
-void Inventory::reserve(unsigned int slot, const ItemType* item, unsigned int count){
-    const ItemType* slot_type = slots[slot].get_type();
-
-    if (item == slot_type){
-        slots[slot].reserve(count);
-    }
-    else{
-        std::cout << "This slot isn't of that item type!" << std::endl;
-    }
+void Inventory::reserve(unsigned int slot, unsigned int count){
+    slots[slot].reserve(count);
 }
 
 // Manager
@@ -145,6 +127,8 @@ void Manager::handle_command(char* input, int len){
     }
 }
 void Manager::handle_order(char* input, int len){
+    std::cout << "Processing order..." << std::endl;
+
     // Read in new order
     std::stringstream ss;
     std::vector<ItemType> items;
@@ -163,31 +147,48 @@ void Manager::handle_order(char* input, int len){
     }
 
     // Double check order validity
-    int count_slots = this->inventory->get_slot_count();
+    bool valid_order = true;
+    int count_slots = this->inventory->get_num_slots();
     int count_items = items.size();
     int inventory_map [count_items];
+
+    for (int i=0; i<count_items; i++){
+        inventory_map[i] = -1;
+    }
 
     // Make sure items match inventory
     for (int i=0; i<count_items; i++){
         for (int j=0; j<count_slots; j++){
-            if (items[i].get_name() == this->inventory->get_item(j)->get_name()){
+            if (items[i].get_name() == this->inventory->get_type(j)->get_name()){
                 inventory_map[i] = j;
             }
         }
+        if (inventory_map[i] < 0){
+            std::cout << "Order contains item not in inventory: " + items[i].get_name() + "!" << std::endl;
+            valid_order = false;
+            break;
+        }
 
-    // Make sure we have enough
+        // Make sure we have enough
+        if (quantities[i] > inventory->get_count_available(inventory_map[i])){
+            std::cout << "Insufficient quantity available: " + items[i].get_name() + "!" << std::endl;
+            std::cout << "Asked for " + std::to_string(quantities[i]) + ", but inventory has " + std::to_string(inventory->get_count_available(inventory_map[i])) << std::endl;
+            valid_order = false;
+            break;
+        }
     }
 
     // If order is valid, reserve it
-    for (int i=0; i<count_items; i++){
+    if (valid_order){
+        for (int i=0; i<count_items; i++){
+            this->inventory->reserve(inventory_map[i], quantities[i]);
+        }
 
-        this->inventory->reserve(inventory_map[i], &items[i], quantities[i]);
+        // Add order to queue
+        this->queue.emplace_back(items, quantities);
+
+        std::cout << "New order placed!" << std::endl;
     }
-
-    // Add order to queue
-    this->queue.emplace_back(items, quantities);
-
-    std::cout << "New order placed!" << std::endl;
 }
 void Manager::handle_status(char* input, int len){
     //foo
@@ -202,16 +203,38 @@ void Manager::process_queue(){
         Order curr_order = this->queue.front();
         this->queue.pop_front();
 
-        for (int i=0; i<3; i++){
-            std::cout << curr_order.get_item(i).get_name() << std::endl;
-            std::cout << curr_order.get_count(i) << std::endl;
+        int count_components = curr_order.get_num_components();
+        int count_slots = this->inventory->get_num_slots();
+        int slot;
+        ItemType curr_item;
+        int curr_count;
+
+        for (int i=0; i<count_components; i++){
+            curr_item = curr_order.get_item(i);
+            curr_count = curr_order.get_count(i);
+            slot = -1;
+
+            for (int j=0; j<count_slots; j++){
+                if (curr_item.get_name() == this->inventory->get_type(j)->get_name()){
+                    slot = j;
+                    break;
+                }
+            }
+
+            // Dispense items
+            dispense_item(slot, curr_count);
+
+            // Subtract inventory
+            this->inventory->remove(slot, curr_count);
+
+            // Unreserve quantities
+            this->inventory->reserve(slot, -curr_count);
         }
+    }
 
-        // Dispense items
-
-        // Subtract inventory
-
-        // Unreserve quantities
+    std::cout << "After processing queue, the inventory status is:" << std::endl;
+    for (int i=0; i<this->inventory->get_num_slots(); i++){
+        std::cout << this->inventory->get_type(i)->get_name() + " has " + std::to_string(this->inventory->get_count_available(i)) << std::endl;
     }
 }
 void Manager::run(){

@@ -43,7 +43,8 @@ class Slot
         void add_items(int quantity);
         void change_type(const ItemType* new_type);
         const ItemType* get_type() const;
-        int get_count() const;
+        int get_count_available() const;
+        int get_count_total() const;
         void remove_items(int quantity);
         void reserve(int quantity);
 };
@@ -54,13 +55,13 @@ class Inventory
         std::vector<Slot> slots;
     public:
         Inventory(int count_slots);
-        void add_item(unsigned int slot, const ItemType* item, unsigned int count);
+        void add(unsigned int slot, unsigned int count);
         void change_slot_type(unsigned int slot, const ItemType* new_type);
-        unsigned int get_count(unsigned int slot) const;
-        const ItemType* get_item(unsigned int slot) const;
-        int get_slot_count();
-        void remove_item(unsigned int slot, const ItemType* item, unsigned int count);
-        void reserve(unsigned int slot, const ItemType* item, unsigned int count);
+        unsigned int get_count_available(unsigned int slot) const;
+        int get_num_slots();
+        const ItemType* get_type(unsigned int slot) const;
+        void remove(unsigned int slot, unsigned int count);
+        void reserve(unsigned int slot, unsigned int count);
 };
 
 class Manager

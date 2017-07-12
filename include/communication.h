@@ -84,6 +84,7 @@ class Order: public Message
         Order(std::vector<ItemType> items, std::vector<int> quantities);
         int get_count(unsigned int position);
         ItemType get_item(unsigned int position);
+        int get_num_components();
         void serialize();
 };
 
