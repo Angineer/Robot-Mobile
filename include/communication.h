@@ -101,7 +101,7 @@ class Status: public Message
      * 4: Dispensing
      */
     public:
-        Status();
+        Status(std::string status);
 };
 
 }

@@ -12,12 +12,77 @@ void shutdown(int signum){
     exit(0);
 }
 
+void send_command(){
+    char buffer[256];
+    printf("Command: ");
+    bzero(buffer,64);
+    fgets(buffer,63,stdin);
+    std::string command_str(buffer);
+
+    // Remove new line
+    command_str.erase(std::remove(command_str.begin(), command_str.end(), '\n'), command_str.end());
+
+    robot::Command command(command_str);
+
+    client.send(command.get_serial());
+}
+
+void send_order(){
+    char buffer[256];
+    std::vector<robot::ItemType> items;
+    std::vector<int> quantities;
+
+    printf("-----New order-----\n");
+
+    for (int i=0; i<count_items; i++){
+
+        printf("Item type: ");
+        bzero(buffer,64);
+        fgets(buffer,63,stdin);
+        std::string item_name(buffer);
+
+        // Remove new line
+        item_name.erase(std::remove(item_name.begin(), item_name.end(), '\n'), item_name.end());
+
+        printf("Quantity: ");
+        bzero(buffer,64);
+        fgets(buffer,63,stdin);
+        std::string quant_str(buffer);
+        int quant = stoi(quant_str);
+
+        robot::ItemType item_type(item_name);
+
+        items.push_back(item_type);
+        quantities.push_back(quant);
+
+    }
+
+    robot::Order order(items, quantities);
+
+    order.serialize();
+    client.send(order.get_serial());
+}
+
+void send_status(){
+    char buffer[256];
+    printf("Status code: ");
+    bzero(buffer,64);
+    fgets(buffer,63,stdin);
+    std::string status_str(buffer);
+
+    // Remove new line
+    status_str.erase(std::remove(status_str.begin(), status_str.end(), '\n'), status_str.end());
+
+    robot::Status status(status_str);
+
+    client.send(status.get_serial());
+}
+
 int main(int argc, char *argv[])
 {
     // Kill client gracefully on ctrl+c
     std::signal(SIGINT, shutdown);
 
-    std::cout << "Start" << std::endl;
     char buffer[256];
 
     while (true){
@@ -27,38 +92,15 @@ int main(int argc, char *argv[])
 
         while (connect){
 
-            std::vector<robot::ItemType> items;
-            std::vector<int> quantities;
+            printf("What kind of message would you like to send?: ");
+            bzero(buffer,64);
+            fgets(buffer,63,stdin);
 
-            printf("-----New order-----\n");
+            if (buffer[0] == 'c') send_command();
+            if (buffer[0] == 'o') send_order();
+            if (buffer[0] == 's') send_status();
 
-            for (int i=0; i<count_items; i++){
 
-                printf("Item type: ");
-                bzero(buffer,64);
-                fgets(buffer,63,stdin);
-                std::string item_name(buffer);
-
-                // Remove new line
-                item_name.erase(std::remove(item_name.begin(), item_name.end(), '\n'), item_name.end());
-
-                printf("Quantity: ");
-                bzero(buffer,64);
-                fgets(buffer,63,stdin);
-                std::string quant_str(buffer);
-                int quant = stoi(quant_str);
-
-                robot::ItemType item_type(item_name);
-
-                items.push_back(item_type);
-                quantities.push_back(quant);
-
-            }
-
-            robot::Order order(items, quantities);
-
-            order.serialize();
-            client.send(order.get_serial());
             std::cout << "Message sent" << std::endl;
         }
     }

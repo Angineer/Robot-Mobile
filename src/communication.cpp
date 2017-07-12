@@ -157,8 +157,8 @@ void Order::serialize(){
     this->serial = "o" + serial_str;
 }
 
-Status::Status(){
-    //foo
+Status::Status(std::string status){
+    this->serial = "s" + status;
 }
 
 }

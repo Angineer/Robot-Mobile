@@ -122,8 +122,12 @@ void Manager::handle_input(char* input, int len){
 }
 void Manager::handle_command(char* input, int len){
     std::string command(input);
+    command = command.substr(1, std::string::npos);
+
+    std::cout << command << std::endl;
+
     if (command == "status"){
-        std::cout << "Current Status: Great!" << std::endl;
+        std::cout << "Current Status: " + std::to_string(this->status) << std::endl;
     }
 }
 void Manager::handle_order(char* input, int len){
@@ -191,10 +195,13 @@ void Manager::handle_order(char* input, int len){
     }
 }
 void Manager::handle_status(char* input, int len){
-    //foo
+    std::string new_status(input);
+    new_status = new_status.substr(1, std::string::npos);
+
+    this->status = stoi(new_status);
 }
 void Manager::process_queue(){
-    std::cout << "Processing queue..." << std::endl;
+    std::cout << "Processing queue with size " + std::to_string(this->queue.size()) + "..." << std::endl;
     // First, check current status
     // If robot is occupied, do nothing
     // If robot is ready to go and queue has orders, start processing them
