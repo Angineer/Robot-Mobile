@@ -1,59 +1,125 @@
-//Robot Main
-//
-//This sketch drives Robie.
-//
-//Programmed by Andy Tracy
+/*
+  Robot Main
 
+  This sketch drives Robie. Uses the Parallax Ping sensor and the SparkFun
+  line follower array, which relies on the line follower array library:
+
+  https://github.com/sparkfun/SparkFun_Line_Follower_Array_Arduino_Library
+
+  Borrows heavily from the AveragingReadBarOnly sketch by Marshall Taylor
+  at SparkFun.
+
+  Author: Andy Tracy <adtme11@gmail.com>
+*/
+
+#define CBUFFER_SIZE 100
+#define MOVING_AVG_WINDOW_SIZE 4
+#define DEBUG_MODE 1
+
+#include "Wire.h"
+#include "sensorbar.h"
 #include <Servo.h>
-//#include <SD.h>
 
-//Drive motor variables
-//High on rightf = forward on right, etc.
-const int rightf=3;
-const int rightb=2;
-const int leftf=5;
-const int leftb=4;
+// Drive motor variables
+// High on rightf = forward on right, etc.
+const int rightf = 3;
+const int rightb = 2;
+const int leftf = 5;
+const int leftb = 4;
+int baseSpeed = 100; // Max speed for forward driving, 0-255
 
-int baseSpeed=100; //Max speed for forward driving, 0-255
+// Line sensor variables
+const uint8_t SX1509_ADDRESS = 0x3E;  // SX1509 I2C address (00)
+SensorBar mySensorBar ( SX1509_ADDRESS );
+CircularBuffer positionHistory ( CBUFFER_SIZE );
+int16_t avePos;
+float avePos_float;
 
-//Eyeball variables
+// Eyeball variables
 Servo look;
-const int lookpin=11;
+const int lookpin = 11;
 const int pingPin = 7;
 long duration, lastdist = 30;
-int distVector[]={30, 30, 30};
+
+// The left, center, and right distance readings from the eyeball sensor, in
+// inches
+int sensorArray[] = { 30, 30, 30 };
 
 void setup(){
-  Serial.begin(9600); // For debugging
-  pinMode(rightf, OUTPUT); //Set motor control pins to output mode
-  pinMode(rightb, OUTPUT);
-  pinMode(leftf, OUTPUT);
-  pinMode(leftb, OUTPUT);
-  pinMode(lookpin, OUTPUT); // Set servo control pin to output mode
-  DriveStop(); // Start with all motors off
-  
-  look.attach(lookpin); //Attach eyeball servo
-  Look(90); //Start servo at 90 degrees
-  Serial.println("Starting up...");
+    if ( DEBUG_MODE ) {
+        Serial.begin ( 115200 ); // For debugging
+        Serial.println ( "Starting up..." );
+    }
+
+    // Motor control
+    pinMode ( rightf, OUTPUT );
+    pinMode ( rightb, OUTPUT );
+    pinMode ( leftf, OUTPUT );
+    pinMode ( leftb, OUTPUT );
+    pinMode ( lookpin, OUTPUT );
+    DriveStop(); // Start with all motors off
+
+    // Eyeball sensor
+    look.attach ( lookpin ); //Attach eyeball servo
+    Look ( 90 ); //Start servo at 90 degrees
+
+    // Line sensor
+    // The IR will only be turned on during reads.
+    mySensorBar.setBarStrobe();
+    //Other option: Command to run all the time
+    //mySensorBar.clearBarStrobe();
+
+    //Default dark on light
+    mySensorBar.clearInvertBits();
+    //Other option: light line on dark
+    //mySensorBar.setInvertBits();
+
+    uint8_t returnStatus = mySensorBar.begin();
+
+    if ( DEBUG_MODE ) {
+        if(returnStatus)
+        {
+            Serial.println("sx1509 IC communication OK");
+        }
+        else
+        {
+            Serial.println("sx1509 IC communication FAILED!");
+        while(1);
+        }
+        Serial.println();
+    }
 }
 
 void loop(){
-  //Look around
-  Look(45);
-  distVector[0]=GetDist();
-  Look(135);
-  distVector[2]=GetDist();
-  Look(90);
-  distVector[1]=GetDist();
-  
-  //Drive accordingly
-  DriveAvoid(distVector);
+  // First, grab data from the line sensor and save it to the circular buffer
+  int temp = mySensorBar.getDensity();
+  //if( (temp < 4)&&(temp > 0) )
+  if (temp < 4)
+  {
+    positionHistory.pushElement ( mySensorBar.getPosition() );
+  }
+  // Get an average of the last 'n' readings
+  avePos = positionHistory.averageLast ( MOVING_AVG_WINDOW_SIZE );
 
-  //Do as FGL does 
-  delay(150);
-  //delay(5000);
+  // Next, grab readings from the eyeball sensor
+  Look(45);
+  sensorArray[0]=GetDist();
+  Look(135);
+  sensorArray[2]=GetDist();
+  Look(90);
+  sensorArray[1]=GetDist();
+  
+  // Take the line and eyeball readings into account and drive accordingly
+  FollowLine();
+
+  // Do as FGL does 
+  delay ( 150 );
 }
 
+/*
+ * @brief Get a single distance reading from the Ping ultrasonic sensor
+ * @return The distance measured by the sensor in inches
+ */
 long GetDist(){
   pinMode(pingPin, OUTPUT);
   digitalWrite(pingPin, LOW);
@@ -70,7 +136,11 @@ long GetDist(){
   return duration / 73.746 / 2;
 }
 
-void Look(int pos){ //Turns the servo to the given angle in degrees
+/*
+ * @brief Set the eyeball servo to a particular angle.
+ * @param pos Angle to set the servo to in degrees
+ */
+void Look(int pos){
   pos=pos*10+580; //Convert angle to microseconds
   
   if(pos>1000 && pos<=2100){ //If the angle is acceptable
@@ -81,8 +151,12 @@ void Look(int pos){ //Turns the servo to the given angle in degrees
   delay(250);
 }
 
-void DriveForward(int right, int left){ //Drive forward
-  //Inputs are percentage of baseSpeed on respective motor
+/*
+ * @brief Drive forward
+ * @param right Percentage of base speed to set the right wheel to
+ * @param left Percentage of base speed to set the left wheel to
+ */
+void DriveForward(int right, int left){
   analogWrite(rightf, baseSpeed*(right/100.0));
   digitalWrite(rightb, LOW);
   analogWrite(leftf, baseSpeed*(left/100.0));
@@ -107,35 +181,45 @@ void DriveBackward(int angle){ //Drive backward
   }
 }
 
-void DriveStop(){ //Stop both drive motors
+/*
+ * @brief Stop both drive motors
+ */
+void DriveStop()
+{
   digitalWrite(rightf, LOW);
   digitalWrite(rightb, LOW);
   digitalWrite(leftf, LOW);
   digitalWrite(leftb, LOW);
 }
 
-void DriveAvoid(int vector[]){
-  int min=1000;
-  int closer=0;
-  //for (int i=0; i<=2; i++){
-  //  if (vector[i]<min){
-  //    min=vector[i];
-  //  }
-  //}
-  if (vector[0]<vector[2]) closer=-1;
-  else closer=1;
-  
-  if (vector[1] < 16 || min(vector[0], vector[2]) < 10){
-    Serial.println("Object too close; avoiding...");
-    DriveBackward(closer);
-    delay(100*random(5, 20));
-    DriveForward(100, 110);
-    //DriveStop();
-  }
-  else{
-    Serial.println("Driving randomly...");
-    DriveForward(100, 110);
-    //DriveStop();
-  }
+void FollowLine(){
+    // Check for obstacles detected by the eyeball sensor
+    int minObstacleDist = 16;
+
+    if ( DEBUG_MODE ) {
+        Serial.println ( "Checking for obstacles..." );
+    }
+
+    for ( int i = 0; i < 3; ++i ) {
+        if ( sensorArray[i] < minObstacleDist ) {
+            DriveStop();
+            return;
+        }
+    }
+
+    if ( DEBUG_MODE ) {
+        Serial.println ( "No obstacles detected, driving forward" );
+    }
+
+    // If no obstacles were detected, drive along the line
+    if (avePos < -50){
+        DriveForward(0, 100);
+    }
+    else if (avePos > -50 && avePos < 50){
+        DriveForward(100, 100);
+    }
+    else if (avePos > 50){
+        DriveForward(100, 0);
+    }
 }
 
