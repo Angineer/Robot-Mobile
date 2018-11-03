@@ -14,6 +14,8 @@
 
 #define CBUFFER_SIZE 100
 #define MOVING_AVG_WINDOW_SIZE 4
+#define MIN_OBS_DIST 6 // Minimum obstacle distance in inches
+
 #define DEBUG_MODE 1
 
 #include "Wire.h"
@@ -108,7 +110,7 @@ void loop(){
   sensorArray[2]=GetDist();
   Look(90);
   sensorArray[1]=GetDist();
-  
+
   // Take the line and eyeball readings into account and drive accordingly
   FollowLine();
 
@@ -194,14 +196,12 @@ void DriveStop()
 
 void FollowLine(){
     // Check for obstacles detected by the eyeball sensor
-    int minObstacleDist = 16;
-
     if ( DEBUG_MODE ) {
         Serial.println ( "Checking for obstacles..." );
     }
 
     for ( int i = 0; i < 3; ++i ) {
-        if ( sensorArray[i] < minObstacleDist ) {
+        if ( sensorArray[i] < MIN_OBS_DIST ) {
             DriveStop();
             return;
         }
