@@ -2,7 +2,9 @@ cmake_minimum_required ( VERSION 2.6 )
 project ( robot-mobile )
 
 # Inventory server
-add_executable ( bluetooth_server ./src/bluetooth_server.cpp )
-set_property ( TARGET bluetooth_server PROPERTY CXX_STANDARD 11 )
-target_include_directories ( bluetooth_server PUBLIC $ENV{HOME}/robot-comm/include )
-target_link_libraries ( bluetooth_server robot-comm )
+add_executable ( mobile_server ./src/mobile_server.cpp
+                               ./src/MobileManager.cpp )
+set_property ( TARGET mobile_server PROPERTY CXX_STANDARD 11 )
+target_include_directories ( mobile_server PUBLIC ./include
+                                           PUBLIC $ENV{HOME}/robot-comm/include )
+target_link_libraries ( mobile_server robot-comm )
