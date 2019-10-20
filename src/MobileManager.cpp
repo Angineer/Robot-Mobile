@@ -5,9 +5,15 @@
 #include <mutex>
 #include <thread>
 
+#include "cereal/cereal.hpp"
+#include "cereal/archives/binary.hpp"
+#include "cereal/types/string.hpp"
+#include "cereal/types/map.hpp"
+
 MobileManager::MobileManager() :
-    server ( SocketType::BLUETOOTH ),
-    state ( State::IDLE )
+    arduino ( "/dev/ttyACM0" ),
+    state ( State::IDLE ),
+    server ( SocketType::BLUETOOTH )
 {}
 
 void MobileManager::run()
@@ -21,21 +27,32 @@ void MobileManager::run()
 }
 
 std::string MobileManager::handle_input ( const std::string& input ){
-    std::cout << "Received message: " << input << std::endl;;
+    std::cout << "Received message: " << input << std::endl;
+    std::string response { "OK" };
+
     char type = input[0];
     if ( type == 'c' ){
         std::string command = input.substr(1, std::string::npos);
         if ( command == "status" ) {
             std::lock_guard<std::mutex> lock ( access_mutex );
-            if ( state == State::IDLE ) return "IDLE";
-            if ( state == State::DISPENSE ) return "DISPENSE";
-            if ( state == State::DELIVER ) return "DELIVER";
-            if ( state == State::ERROR ) return "ERROR";
+            response = stateToString ( state );
         }
     } else if ( type == 'o' ) {
-        // TODO: How does Robie know where to go?
-        // TODO: How does Robie know when the base is done dispensing?
+        // Read in new order so Robie knows where he's headed
+        std::string order = input.substr ( 1, std::string::npos );
+        std::stringstream ss ( order );
+        std::map<std::string, int> items;
+
+        {
+            cereal::BinaryInputArchive iarchive ( ss ); // Create an input archive
+            iarchive ( destination, items ); // Read the data from the archive
+        }
+
+        std::cout << "Headed to " << destination << std::endl;
+
         std::lock_guard<std::mutex> lock ( access_mutex );
-        state = State::DISPENSE;
+        state = State::DELIVER;
     }
+
+    return response;
 }
