@@ -22,6 +22,9 @@
 #include "sensorbar.h"
 #include <Servo.h>
 
+// General variables
+char directive { 'h' };
+
 // Drive motor variables
 // High on rightf = forward on right, etc.
 const int rightf = 3;
@@ -48,10 +51,7 @@ long duration, lastdist = 30;
 int sensorArray[] = { 30, 30, 30 };
 
 void setup(){
-    if ( DEBUG_MODE ) {
-        Serial.begin ( 115200 ); // For debugging
-        Serial.println ( "Starting up..." );
-    }
+    Serial.begin ( 9600 ); // Connect to raspi
 
     // Motor control
     pinMode ( rightf, OUTPUT );
@@ -77,52 +77,53 @@ void setup(){
     //mySensorBar.setInvertBits();
 
     uint8_t returnStatus = mySensorBar.begin();
-
-    if ( DEBUG_MODE ) {
-        if(returnStatus)
-        {
-            Serial.println("sx1509 IC communication OK");
-        }
-        else
-        {
-            Serial.println("sx1509 IC communication FAILED!");
-        while(1);
-        }
-        Serial.println();
-    }
 }
 
 void loop(){
-  // First, grab data from the line sensor and save it to the circular buffer
-  int temp = mySensorBar.getDensity();
-  //if( (temp < 4)&&(temp > 0) )
-  if (temp < 4)
-  {
-    positionHistory.pushElement ( mySensorBar.getPosition() );
-  }
-  // Get an average of the last 'n' readings
-  avePos = positionHistory.averageLast ( MOVING_AVG_WINDOW_SIZE );
+    // Check if there is an update from the raspi
+    if Serial.available() {
+        directive = Serial.read();
+    }
 
-  // Next, grab readings from the eyeball sensor
-  Look(45);
-  sensorArray[0]=GetDist();
-  Look(135);
-  sensorArray[2]=GetDist();
-  Look(90);
-  sensorArray[1]=GetDist();
+    // Proceed based on the current directive from the raspi. 
+    if ( directive == 'h' ) { // If we are halted, just hang out.
+    } else if ( directive == 'd' ) { // Raspi says we need to get moving
+        // Take readings from all the sensors
+        float linePos = readLineSensor();
+        int eyeballArray[] = readEyeballSensor();
 
-  // Take the line and eyeball readings into account and drive accordingly
-  FollowLine();
+        // First, grab data from the line sensor and save it to the circular buffer
+        //int temp = mySensorBar.getDensity();
+        //if( (temp < 4)&&(temp > 0) )
+        //if (temp < 4)
+        //{
+            //positionHistory.pushElement ( mySensorBar.getPosition() );
+        //}
+        // Get an average of the last n readings
+        //avePos = positionHistory.averageLast ( MOVING_AVG_WINDOW_SIZE );
 
-  // Do as FGL does 
-  delay ( 150 );
+        // Next, grab readings from the eyeball sensor
+        //Look(45);
+        //sensorArray[0]=GetDist();
+        //Look(135);
+        //sensorArray[2]=GetDist();
+        //Look(90);
+        //sensorArray[1]=GetDist();
+
+        // Drive based on sensor readings
+        FollowLine ( linePos, eyeballArray );
+    }
+
+    // Don't let the loop run too fast
+    delay ( 150 );
 }
 
 /*
  * @brief Get a single distance reading from the Ping ultrasonic sensor
  * @return The distance measured by the sensor in inches
  */
-long GetDist(){
+long readEyeballSensor()
+{
   pinMode(pingPin, OUTPUT);
   digitalWrite(pingPin, LOW);
   delayMicroseconds(2);
@@ -130,11 +131,11 @@ long GetDist(){
   delayMicroseconds(5);
   digitalWrite(pingPin, LOW);
   
-  //Pick up the ping
+  // Pick up the ping
   pinMode(pingPin, INPUT);
   duration=pulseIn(pingPin, HIGH);
   
-  //Convert to inches
+  // Convert to inches
   return duration / 73.746 / 2;
 }
 
@@ -142,30 +143,32 @@ long GetDist(){
  * @brief Set the eyeball servo to a particular angle.
  * @param pos Angle to set the servo to in degrees
  */
-void Look(int pos){
-  pos=pos*10+580; //Convert angle to microseconds
+void rotateEyeballServo ( int pos )
+{
+  pos = pos * 10 + 580; // Convert angle to microseconds
   
-  if(pos>1000 && pos<=2100){ //If the angle is acceptable
-    look.writeMicroseconds(pos); //Send it to the servo
-    delay(150);
+  if ( pos>1000 && pos<=2100 ) { // If the angle is acceptable
+    look.writeMicroseconds ( pos ); // Send it to the servo
+    delay ( 150 );
   }
-  //Pause for debugging
-  delay(250);
 }
 
 /*
- * @brief Drive forward
- * @param right Percentage of base speed to set the right wheel to
- * @param left Percentage of base speed to set the left wheel to
+ * @brief Drive the robot
+ * @param linearSpeed Linear speed of the robot from 0.0 to 1.0. Positive is
+ *        forward, negative is backward.
+ * @param angularSpeed Angular speed of the robot from 0.0 to 1.0. Positive is
+ *        left, negative is right.
  */
-void DriveForward(int right, int left){
-  analogWrite(rightf, baseSpeed*(right/100.0));
+void drive ( float linearSpeed, float angularSpeed )
+{
+  analogWrite ( rightf, baseSpeed * ( right / 100.0 ) );
   digitalWrite(rightb, LOW);
   analogWrite(leftf, baseSpeed*(left/100.0));
   digitalWrite(leftb, LOW);
 }
 
-void DriveBackward(int angle){ //Drive backward
+void driveBackward(int angle){ //Drive backward
   digitalWrite(rightf, LOW);
   digitalWrite(leftf, LOW);
   
@@ -186,7 +189,7 @@ void DriveBackward(int angle){ //Drive backward
 /*
  * @brief Stop both drive motors
  */
-void DriveStop()
+void driveStop()
 {
   digitalWrite(rightf, LOW);
   digitalWrite(rightb, LOW);
