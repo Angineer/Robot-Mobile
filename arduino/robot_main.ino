@@ -22,12 +22,12 @@
 #define RIGHT_BACK_PIN 2
 #define LEFT_FWD_PIN   5
 #define LEFT_BACK_PIN  4
-#define MAX_SPEED 100 // Max speed for forward driving, 0-255
+#define MAX_SPEED 120 // Max speed for forward driving, 0-255
 
 // Eyeball sensor
 #define LOOK_PIN 11
 #define PING_PIN 7
-#define MIN_OBS_DIST 6 // Minimum obstacle distance in inches
+#define MIN_OBS_DIST 12 // Minimum obstacle distance in inches
 #define EYEBALL_MOVE_TIME 25 // Time for servo to reach desired position in ms
 
 // Line sensor
@@ -66,8 +66,8 @@ void setup(){
     // Line sensor
     mySensorBar.setBarStrobe(); // Turn on IR only during reads
     //mySensorBar.clearBarStrobe(); // Run IR all the time
-    mySensorBar.clearInvertBits(); // Dark line on light
-    //mySensorBar.setInvertBits(); // Light line on dark
+    //mySensorBar.clearInvertBits(); // Dark line on light
+    mySensorBar.setInvertBits(); // Light line on dark
     mySensorBar.begin();
 }
 
@@ -107,7 +107,7 @@ void loop(){
         // Check our position against the line
         float linePos = readLineSensor();
         float linear = 1.0;
-        float angular = linePos;
+        float angular = -linePos / 127;
 
         drive ( linear, angular );
     }
@@ -118,7 +118,9 @@ void loop(){
 
 /* 
  * @brief Read the line sensor array
- * @return The average of the last MOVING_AVG_WINDOW_SIZE position readings
+ * @return The average of the last MOVING_AVG_WINDOW_SIZE position readings.
+ *         Values will be in the range -127 (line is on the left) to 127 (line
+ *         is on the right).
  */
 float readLineSensor()
 {
