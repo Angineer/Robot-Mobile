@@ -28,7 +28,7 @@
 #define LOOK_PIN 11
 #define PING_PIN 7
 #define MIN_OBS_DIST 6 // Minimum obstacle distance in inches
-#define EYEBALL_MOVE_TIME 150 // Time for servo to reach desired position in ms
+#define EYEBALL_MOVE_TIME 25 // Time for servo to reach desired position in ms
 
 // Line sensor
 #define MOVING_AVG_WINDOW_SIZE 4
@@ -45,8 +45,8 @@ CircularBuffer positionHistory ( CIRCULAR_BUFFER_SIZE );
 
 // Eyeball variables
 Servo look;
-int eyeballArray[] = { 30, 30, 30 }; // Left, center, right distances in inches
-
+int angle { 90 }; // Angle of the servo in degrees, 90 is straight forward
+bool direction { true }; // Controls if servo sweep moves right or left
 
 void setup(){
     Serial.begin ( 9600 ); // Connect to raspi
@@ -56,12 +56,12 @@ void setup(){
     pinMode ( RIGHT_BACK_PIN, OUTPUT );
     pinMode ( LEFT_FWD_PIN, OUTPUT );
     pinMode ( LEFT_BACK_PIN, OUTPUT );
-    DriveStop(); // Start with all motors off
+    driveStop(); // Start with all motors off
 
     // Eyeball sensor
     pinMode ( LOOK_PIN, OUTPUT );
     look.attach ( LOOK_PIN );
-    rotateEyeballServo ( 90 ); // Start servo at 90 degrees
+    rotateEyeballServo ( angle );
 
     // Line sensor
     mySensorBar.setBarStrobe(); // Turn on IR only during reads
@@ -73,32 +73,47 @@ void setup(){
 
 void loop(){
     // Check if there is an update from the raspi
-    if Serial.available() {
+    if ( Serial.available() ) {
         directive = Serial.read();
     }
 
     // Proceed based on the current directive from the raspi. 
     if ( directive == 'h' ) { // If we are halted, just hang out.
+        driveStop();
     } else if ( directive == 'd' ) { // Raspi says we need to get moving
         // Check for obstacles detected by the eyeball sensor
-        readEyeballSensor ( eyeballArray );
-        for ( int i = 0; i < 3; ++i ) {
-            if ( eyeballArray[i] < MIN_OBS_DIST ) {
-                DriveStop();
-                return;
-            }
+        long obsDist = ping();
+        if ( obsDist < MIN_OBS_DIST ) {
+            driveStop();
+            return;
         }
+
+        // Move the eyeball servo a little every loop so that it does a scan
+        // of the area in front of Robie
+        if ( direction ) {
+            angle += 5;
+        } else {
+            angle -= 5;
+        }
+
+        if ( angle <= 45 ) {
+            direction = true;
+        } else if ( angle >= 135 ) {
+            direction = false;
+        }
+
+        rotateEyeballServo ( angle );
 
         // Check our position against the line
         float linePos = readLineSensor();
-        float linear = MAX_SPEED;
+        float linear = 1.0;
         float angular = linePos;
 
         drive ( linear, angular );
     }
 
     // Don't let the loop run too fast
-    delay ( 150 );
+    delay ( 50 );
 }
 
 /* 
@@ -123,35 +138,19 @@ float readLineSensor()
  */
 long ping()
 {
-  pinMode(pingPin, OUTPUT);
-  digitalWrite(pingPin, LOW);
+  pinMode(PING_PIN, OUTPUT);
+  digitalWrite(PING_PIN, LOW);
   delayMicroseconds(2);
-  digitalWrite(pingPin, HIGH);
+  digitalWrite(PING_PIN, HIGH);
   delayMicroseconds(5);
-  digitalWrite(pingPin, LOW);
+  digitalWrite(PING_PIN, LOW);
 
   // Pick up the ping
-  pinMode ( pingPin, INPUT );
-  long duration = pulseIn ( pingPin, HIGH );
+  pinMode ( PING_PIN, INPUT );
+  long duration = pulseIn ( PING_PIN, HIGH );
 
   // Convert to inches
   return duration / 73.746 / 2;
-}
-
-/* 
- * @brief Take three readings from the ping sensors at different angles (left,
- *        center, and right)
- * @param outputArray An array into which the reading will be saved
- */
-void readEyeballSensor ( long* outputArray )
-{
-    // Grab left, right, and center readings from the eyeball sensor
-    rotateEyeballServo ( 45 );
-    outputArray[0] = ping();
-    rotateEyeballServo ( 135 );
-    outputArray[2] = ping();
-    rotateEyeballServo ( 90 );
-    outputArray[1] = ping();
 }
 
 /*
@@ -178,8 +177,9 @@ void rotateEyeballServo ( int pos )
 void drive ( float linearSpeed, float angularSpeed )
 {
     bool sign = linearSpeed >= 0;
+    float leftSpeed, rightSpeed;
 
-    if ( angularSpeed => 0 ) {
+    if ( angularSpeed >= 0 ) {
         leftSpeed = ( 1.0 - angularSpeed ) * MAX_SPEED;
         rightSpeed = MAX_SPEED;
     } else {
@@ -188,15 +188,15 @@ void drive ( float linearSpeed, float angularSpeed )
     }
 
     if ( linearSpeed >= 0 ) {
-        analogWrite ( leftf, linearSpeed * leftSpeed );
-        digitalWrite ( leftb, LOW );
-        analogWrite ( rightf, linearSpeed * rightSpeed );
-        digitalWrite ( rightb, LOW );
+        analogWrite ( LEFT_FWD_PIN, linearSpeed * leftSpeed );
+        digitalWrite ( LEFT_BACK_PIN, LOW );
+        analogWrite ( RIGHT_FWD_PIN, linearSpeed * rightSpeed );
+        digitalWrite ( RIGHT_BACK_PIN, LOW );
     } else {
-        digitalWrite ( leftf, LOW );
-        analogWrite ( leftb, -linearSpeed * leftSpeed );
-        digitalWrite ( rightf, LOW );
-        analogWrite ( rightb, -linearSpeed * rightSpeed );
+        digitalWrite ( LEFT_FWD_PIN, LOW );
+        analogWrite ( LEFT_BACK_PIN, -linearSpeed * leftSpeed );
+        digitalWrite ( RIGHT_FWD_PIN, LOW );
+        analogWrite ( RIGHT_BACK_PIN, -linearSpeed * rightSpeed );
     }
 }
 
@@ -205,9 +205,9 @@ void drive ( float linearSpeed, float angularSpeed )
  */
 void driveStop()
 {
-  digitalWrite(rightf, LOW);
-  digitalWrite(rightb, LOW);
-  digitalWrite(leftf, LOW);
-  digitalWrite(leftb, LOW);
+  digitalWrite(RIGHT_FWD_PIN, LOW);
+  digitalWrite(RIGHT_BACK_PIN, LOW);
+  digitalWrite(LEFT_FWD_PIN, LOW);
+  digitalWrite(LEFT_BACK_PIN, LOW);
 }
 
