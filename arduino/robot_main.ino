@@ -45,8 +45,6 @@ CircularBuffer positionHistory ( CIRCULAR_BUFFER_SIZE );
 
 // Eyeball variables
 Servo look;
-int angle { 90 }; // Angle of the servo in degrees, 90 is straight forward
-bool direction { true }; // Controls if servo sweep moves right or left
 
 void setup(){
     Serial.begin ( 9600 ); // Connect to raspi
@@ -61,7 +59,7 @@ void setup(){
     // Eyeball sensor
     pinMode ( LOOK_PIN, OUTPUT );
     look.attach ( LOOK_PIN );
-    rotateEyeballServo ( angle );
+    rotateEyeballServo ( 90 );
 
     // Line sensor
     mySensorBar.setBarStrobe(); // Turn on IR only during reads
@@ -81,6 +79,12 @@ void loop(){
     if ( directive == 'h' ) { // If we are halted, just hang out.
         driveStop();
     } else if ( directive == 'd' ) { // Raspi says we need to get moving
+        // Check our position against the line
+        float linePos = readLineSensor();
+
+        int angle = static_cast<int> ( linePos * 45 / 127 );
+        rotateEyeballServo ( 90 + angle );
+
         // Check for obstacles detected by the eyeball sensor
         long obsDist = ping();
         if ( obsDist < MIN_OBS_DIST ) {
@@ -88,24 +92,6 @@ void loop(){
             return;
         }
 
-        // Move the eyeball servo a little every loop so that it does a scan
-        // of the area in front of Robie
-        if ( direction ) {
-            angle += 5;
-        } else {
-            angle -= 5;
-        }
-
-        if ( angle <= 45 ) {
-            direction = true;
-        } else if ( angle >= 135 ) {
-            direction = false;
-        }
-
-        rotateEyeballServo ( angle );
-
-        // Check our position against the line
-        float linePos = readLineSensor();
         float linear = 1.0;
         float angular = -linePos / 127;
 
