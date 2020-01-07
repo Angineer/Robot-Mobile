@@ -13,14 +13,15 @@
 MobileManager::MobileManager() :
     arduino ( "/dev/ttyACM0" ),
     state ( State::IDLE ),
-    server ( SocketType::BLUETOOTH )
+    server ( SocketType::BLUETOOTH ),
+    checker ( "/home/pi/camera.jpg",
+              [ this ] ( int id ) {
+                  this->handle_cam_update ( id );
+              } )
 {}
 
 void MobileManager::run()
 {
-    // Start up the image checker
-    // TODO
-
     // Run server and process callbacks
     std::function<std::string ( std::string )> callback_func (
         bind ( &MobileManager::handle_input, this, std::placeholders::_1 ) );
@@ -56,4 +57,9 @@ std::string MobileManager::handle_input ( const std::string& input ){
     }
 
     return response;
+}
+
+void MobileManager::handle_cam_update ( int location_id )
+{
+    //TODO
 }

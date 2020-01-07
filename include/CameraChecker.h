@@ -14,35 +14,20 @@ class CameraChecker {
 public:
     /*!
      * @brief Constructor
+     * @param imagePath The location of the image on disk that this object
+     *        will check
+     * @param callback A callback function to call when an apriltag is
+     *        detected in the image
      */
-    CameraChecker();
+    CameraChecker ( const std::string & imagePath,
+                    std::function<void ( int )> callback );
 
     /*!
      * @brief Destructor
      */
     ~CameraChecker();
 
-    /*!
-     * @brief Kick off the image-checking loop
-     * @param imagePath The location of the image on disk that this object
-     *        will check
-     * @param callback A callback function to call when an apriltag is
-     *        detected in the image
-     */
-    void start_checking ( const std::string & imagePath,
-                          std::function<void ( int )> callback  );
-
 private:
-    /*!
-     * @brief The image that we'll check
-     */
-    std::string image;
-
-    /*!
-     * @brief The callback that we'll call when we find an apriltag
-     */
-    std::function<void ( int )> callback;
-
     /*!
      * @brief Thread to run the image check loop
      */

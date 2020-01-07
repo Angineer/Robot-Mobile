@@ -20,7 +20,7 @@ private:
     std::string handle_input ( const std::string& input );
 
     // Handle update from the CameraChecker
-    std::string handle_cam_update ( int location_id );
+    void handle_cam_update ( int location_id );
 
     // Arduino that does the low-level motor control and sensing
     Arduino arduino;
