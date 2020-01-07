@@ -4,6 +4,7 @@
 #include <mutex>
 
 #include <Arduino.h>
+#include "CameraChecker.h"
 #include <Server.h>
 #include <State.h>
 
@@ -17,6 +18,9 @@ public:
 private:
     // Handle input from connections on the bluetooth server
     std::string handle_input ( const std::string& input );
+
+    // Handle update from the CameraChecker
+    std::string handle_cam_update ( int location_id );
 
     // Arduino that does the low-level motor control and sensing
     Arduino arduino;
@@ -32,6 +36,9 @@ private:
 
     // The bluetooth server
     Server server;
+
+    // Class to check for apriltags in the camera's view and let us know
+    CameraChecker checker;
 };
 
 #endif

@@ -18,11 +18,12 @@ MobileManager::MobileManager() :
 
 void MobileManager::run()
 {
-    // Bind function for processing inputs
-    std::function<std::string ( std::string )> callback_func (
-        bind ( &MobileManager::handle_input, this, std::placeholders::_1 ) );
+    // Start up the image checker
+    // TODO
 
     // Run server and process callbacks
+    std::function<std::string ( std::string )> callback_func (
+        bind ( &MobileManager::handle_input, this, std::placeholders::_1 ) );
     server.serve ( callback_func );
 }
 
