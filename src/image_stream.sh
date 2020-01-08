@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 
-raspistill --nopreview --timeout 0 --rotation 270 --signal --output /home/pi/camera.jpg
+PID_FILE=/home/pi/cam_pid
+
+rm $PID_FILE
+raspistill --nopreview --timeout 0 --rotation 270 --signal --output /home/pi/camera.jpg &
+echo $! > $PID_FILE
