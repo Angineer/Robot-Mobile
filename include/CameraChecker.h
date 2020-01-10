@@ -28,9 +28,12 @@ public:
     ~CameraChecker();
 
 private:
-    // @brief Read jpeg image
+    // @brief Read bitmap image
     // @param file The file to read
-    void read_jpeg ( const std::string & image_path );
+    // @param output A pointer to the array where the image data will be
+    //        stored
+    void read_bmp ( const std::string& file,
+                    unsigned char* output );
 
     // @brief PID of the raspistill process that will take the actual pictures
     unsigned int cam_pid;

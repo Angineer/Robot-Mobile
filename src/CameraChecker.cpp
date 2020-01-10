@@ -1,4 +1,5 @@
 #include "CameraChecker.h"
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <signal.h>
@@ -15,6 +16,10 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
 
     // Start checking
     auto checkFunc = [ imagePath, callback, this ] {
+        // Allocate space to save the image data
+        // TODO: make this more robust
+        auto img = new unsigned char[800*600*3];
+
         // Run until we get a signal to stop
         while ( !this->stopFlag.load() ) {
             // Send signal to camera process so it grabs a new image
@@ -25,7 +30,7 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
 
             // Read image
             std::cout << "Reading image" << std::endl;
-            read_jpeg ( imagePath );
+            read_bmp ( imagePath, img );
 
             // Check for apriltag
             int tag_id { -1 };
@@ -36,6 +41,7 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
                 callback ( tag_id );
             }
         }
+        delete[] img;
     };
     thread = std::thread ( checkFunc );
 }
@@ -49,7 +55,26 @@ CameraChecker::~CameraChecker()
     }
 }
 
-void CameraChecker::read_jpeg ( const std::string & file_path )
+void CameraChecker::read_bmp ( const std::string & file_path,
+                                         unsigned char* output )
 {
-    //TODO
+    // I make some assumptions about the format here, specifically
+    // that we're working with the BITMAPINFOHEADER format
+
+    std::ifstream reader { file_path, std::ios_base::in | std::ios_base::binary };
+
+    // Read in the bmp and dib headers
+    char header[54];
+    reader.read ( header, 54 );
+
+    // Read the size from the header
+    long width, height;
+    memcpy ( &width, &header[18], sizeof ( width ) );
+    memcpy ( &height, &header[22], sizeof ( height ) );
+
+    std::cout << "DEBUG: " << width << "x" << height << std::endl;
+
+    // Read in the data
+    int size = 3 * width * height;
+    reader.read ( reinterpret_cast<char*> ( output ), size );
 }
