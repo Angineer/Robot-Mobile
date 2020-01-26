@@ -32,6 +32,7 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
 
             // Read image
             read_bmp ( imagePath, img );
+            //image_u8_write_pnm ( img, "debug.pnm" );
 
             // Check for apriltags
             int tag_id { -1 };
@@ -39,7 +40,8 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
             apriltag_family_t *tf = tag16h5_create();
             apriltag_detector_add_family(td, tf);
             zarray_t *detections = apriltag_detector_detect ( td, img );
-            std::cout << "Detected " << zarray_size(detections) << " tags" << std::endl;
+            std::cout << "Detected " << zarray_size(detections)
+                      << " tags" << std::endl;
 
             for (int i = 0; i < zarray_size(detections); i++) {
                 apriltag_detection_t *det;
@@ -56,10 +58,10 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
 
             // If we found one, let the MobileManager know
             if ( tag_id != -1 ){
-                callback ( tag_id );
+                //callback ( tag_id );
             }
         }
-        delete[] img;
+        image_u8_destroy ( img );
     };
     thread = std::thread ( checkFunc );
 }
@@ -89,17 +91,17 @@ void CameraChecker::read_bmp ( const std::string & file_path,
     memcpy ( &width, &header[18], sizeof ( width ) );
     memcpy ( &height, &header[22], sizeof ( height ) );
 
-    //std::cout << "DEBUG: " << width << "x" << height << std::endl;
-
     // Read in the data one pixel at a time and convert to grayscale as we do
     char pixel_data[3];
-    for ( unsigned long px = 0; px < width * height; ++px ) {
-        reader.read ( pixel_data, 3 );
-        double r = pixel_data[0];
-        double g = pixel_data[1];
-        double b = pixel_data[2];
-        unsigned char gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    for ( unsigned long y = 0; y < height; ++y ) {
+        for ( unsigned long x = 0; x < width; ++x ) {
+            reader.read ( pixel_data, 3 );
+            double r = pixel_data[0];
+            double g = pixel_data[1];
+            double b = pixel_data[2];
+            unsigned char gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-        output->buf[px] = gray;
+            output->buf[y*output->stride + x] = gray;
+        }
     }
 }
