@@ -1,6 +1,7 @@
 #ifndef CAMERA_CHECKER_H
 #define CAMERA_CHECKER_H
 
+#include <apriltag.h>
 #include <atomic>
 #include <functional>
 #include <thread>
@@ -33,7 +34,7 @@ private:
     // @param output A pointer to the array where the image data will be
     //        stored
     void read_bmp ( const std::string& file,
-                    unsigned char* output );
+                    image_u8_t* output );
 
     // @brief PID of the raspistill process that will take the actual pictures
     unsigned int cam_pid;

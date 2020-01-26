@@ -4,6 +4,8 @@
 #include <iostream>
 #include <signal.h>
 
+#include <tag16h5.h>
+
 CameraChecker::CameraChecker ( const std::string & imagePath,
                                std::function<void ( int )> callback ) :
     stopFlag ( false )
@@ -18,7 +20,7 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
     auto checkFunc = [ imagePath, callback, this ] {
         // Allocate space to save the image data
         // TODO: make this more robust
-        auto img = new unsigned char[800*600*3];
+        auto img = image_u8_create ( 800, 600 );
 
         // Run until we get a signal to stop
         while ( !this->stopFlag.load() ) {
@@ -29,12 +31,28 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
             std::this_thread::sleep_for ( std::chrono::milliseconds ( 100 ) );
 
             // Read image
-            std::cout << "Reading image" << std::endl;
             read_bmp ( imagePath, img );
 
-            // Check for apriltag
+            // Check for apriltags
             int tag_id { -1 };
-            // TODO
+            apriltag_detector_t *td = apriltag_detector_create();
+            apriltag_family_t *tf = tag16h5_create();
+            apriltag_detector_add_family(td, tf);
+            zarray_t *detections = apriltag_detector_detect ( td, img );
+            std::cout << "Detected " << zarray_size(detections) << " tags" << std::endl;
+
+            for (int i = 0; i < zarray_size(detections); i++) {
+                apriltag_detection_t *det;
+                zarray_get(detections, i, &det);
+
+                // Do stuff with detections here.
+                std::cout << "ID detected: " << det->id << std::endl;
+                apriltag_detection_destroy ( det );
+            }
+
+            zarray_destroy ( detections );
+            tag16h5_destroy(tf);
+            apriltag_detector_destroy(td);
 
             // If we found one, let the MobileManager know
             if ( tag_id != -1 ){
@@ -56,11 +74,10 @@ CameraChecker::~CameraChecker()
 }
 
 void CameraChecker::read_bmp ( const std::string & file_path,
-                                         unsigned char* output )
+                               image_u8_t* output )
 {
     // I make some assumptions about the format here, specifically
     // that we're working with the BITMAPINFOHEADER format
-
     std::ifstream reader { file_path, std::ios_base::in | std::ios_base::binary };
 
     // Read in the bmp and dib headers
@@ -72,9 +89,17 @@ void CameraChecker::read_bmp ( const std::string & file_path,
     memcpy ( &width, &header[18], sizeof ( width ) );
     memcpy ( &height, &header[22], sizeof ( height ) );
 
-    std::cout << "DEBUG: " << width << "x" << height << std::endl;
+    //std::cout << "DEBUG: " << width << "x" << height << std::endl;
 
-    // Read in the data
-    int size = 3 * width * height;
-    reader.read ( reinterpret_cast<char*> ( output ), size );
+    // Read in the data one pixel at a time and convert to grayscale as we do
+    char pixel_data[3];
+    for ( unsigned long px = 0; px < width * height; ++px ) {
+        reader.read ( pixel_data, 3 );
+        double r = pixel_data[0];
+        double g = pixel_data[1];
+        double b = pixel_data[2];
+        unsigned char gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+        output->buf[px] = gray;
+    }
 }
