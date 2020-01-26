@@ -39,6 +39,7 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
             apriltag_detector_t *td = apriltag_detector_create();
             apriltag_family_t *tf = tag16h5_create();
             apriltag_detector_add_family(td, tf);
+            //td->qtp.min_white_black_diff = 10;
             zarray_t *detections = apriltag_detector_detect ( td, img );
             std::cout << "Detected " << zarray_size(detections)
                       << " tags" << std::endl;
@@ -48,7 +49,10 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
                 zarray_get(detections, i, &det);
 
                 // Do stuff with detections here.
-                std::cout << "ID detected: " << det->id << std::endl;
+                if ( det->decision_margin > 70 ) {
+                    std::cout << "ID detected: " << det->id 
+                              << std::endl;
+                }
                 apriltag_detection_destroy ( det );
             }
 
@@ -101,7 +105,7 @@ void CameraChecker::read_bmp ( const std::string & file_path,
             double b = pixel_data[2];
             unsigned char gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-            output->buf[y*output->stride + x] = gray;
+            output->buf[( height - y - 1)*output->stride + x] = gray;
         }
     }
 }
