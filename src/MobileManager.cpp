@@ -23,8 +23,9 @@ MobileManager::MobileManager() :
 void MobileManager::run()
 {
     // Run server and process callbacks
-    std::function<std::string ( std::string )> callback_func (
-        bind ( &MobileManager::handle_input, this, std::placeholders::_1 ) );
+    auto callback_func = [ this ] ( std::string input ) {
+                             return this->handle_input ( input );
+                         };
     server.serve ( callback_func );
 }
 
@@ -62,4 +63,5 @@ std::string MobileManager::handle_input ( const std::string& input ){
 void MobileManager::handle_cam_update ( int location_id )
 {
     //TODO
+    std::cout << "Location update: " << location_id << std::endl;
 }

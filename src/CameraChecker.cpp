@@ -18,10 +18,6 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
 
     // Start checking
     auto checkFunc = [ imagePath, callback, this ] {
-        // Allocate space to save the image data
-        // TODO: make this more robust
-        auto img = image_u8_create ( 800, 600 );
-
         // Run until we get a signal to stop
         while ( !this->stopFlag.load() ) {
             // Send signal to camera process so it grabs a new image
@@ -31,7 +27,7 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
             std::this_thread::sleep_for ( std::chrono::milliseconds ( 100 ) );
 
             // Read image
-            read_bmp ( imagePath, img );
+            auto img = read_bmp ( imagePath );
             //image_u8_write_pnm ( img, "debug.pnm" );
 
             // Check for apriltags
@@ -41,8 +37,6 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
             apriltag_detector_add_family(td, tf);
             //td->qtp.min_white_black_diff = 10;
             zarray_t *detections = apriltag_detector_detect ( td, img );
-            std::cout << "Detected " << zarray_size(detections)
-                      << " tags" << std::endl;
 
             for (int i = 0; i < zarray_size(detections); i++) {
                 apriltag_detection_t *det;
@@ -50,22 +44,23 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
 
                 // Do stuff with detections here.
                 if ( det->decision_margin > 70 ) {
-                    std::cout << "ID detected: " << det->id 
-                              << std::endl;
+                    tag_id = det->id;
                 }
                 apriltag_detection_destroy ( det );
             }
 
+            // Clean up
+            image_u8_destroy ( img );
             zarray_destroy ( detections );
-            tag16h5_destroy(tf);
-            apriltag_detector_destroy(td);
+            tag16h5_destroy ( tf );
+            apriltag_detector_destroy ( td );
 
             // If we found one, let the MobileManager know
             if ( tag_id != -1 ){
-                //callback ( tag_id );
+                std::cout << "ID detected: " << tag_id << std::endl;
+                callback ( tag_id );
             }
         }
-        image_u8_destroy ( img );
     };
     thread = std::thread ( checkFunc );
 }
@@ -79,8 +74,7 @@ CameraChecker::~CameraChecker()
     }
 }
 
-void CameraChecker::read_bmp ( const std::string & file_path,
-                               image_u8_t* output )
+image_u8_t* CameraChecker::read_bmp ( const std::string & file_path )
 {
     // I make some assumptions about the format here, specifically
     // that we're working with the BITMAPINFOHEADER format
@@ -95,6 +89,9 @@ void CameraChecker::read_bmp ( const std::string & file_path,
     memcpy ( &width, &header[18], sizeof ( width ) );
     memcpy ( &height, &header[22], sizeof ( height ) );
 
+    // Prep output
+    image_u8_t* img = image_u8_create ( width, height );
+
     // Read in the data one pixel at a time and convert to grayscale as we do
     char pixel_data[3];
     for ( unsigned long y = 0; y < height; ++y ) {
@@ -103,9 +100,12 @@ void CameraChecker::read_bmp ( const std::string & file_path,
             double r = pixel_data[0];
             double g = pixel_data[1];
             double b = pixel_data[2];
+
+            // This is from the Wikipedia grayscale article
             unsigned char gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-            output->buf[( height - y - 1)*output->stride + x] = gray;
+            img->buf[( height - y - 1)*img->stride + x] = gray;
         }
     }
+    return img;
 }

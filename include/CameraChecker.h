@@ -29,12 +29,12 @@ public:
     ~CameraChecker();
 
 private:
-    // @brief Read bitmap image
+    // @brief Read bitmap image. It will be converted to grayscale.
     // @param file The file to read
-    // @param output A pointer to the array where the image data will be
-    //        stored
-    void read_bmp ( const std::string& file,
-                    image_u8_t* output );
+    // @return A pointer to the array where the image data will be stored. The
+    //         caller is responsible for cleaning it up (you should probably
+    //         use the apriltag cleanup function).
+    image_u8_t* read_bmp ( const std::string& file );
 
     // @brief PID of the raspistill process that will take the actual pictures
     unsigned int cam_pid;
