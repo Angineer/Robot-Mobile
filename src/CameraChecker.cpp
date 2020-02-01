@@ -57,7 +57,7 @@ CameraChecker::CameraChecker ( const std::string & imagePath,
 
             // If we found one, let the MobileManager know
             if ( tag_id != -1 ){
-                std::cout << "ID detected: " << tag_id << std::endl;
+                //std::cout << "ID detected: " << tag_id << std::endl;
                 callback ( tag_id );
             }
         }

@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include "CameraChecker.h"
+#include "MobileConfiguration.h"
 #include <Server.h>
 #include <State.h>
 
@@ -29,7 +30,7 @@ private:
     std::mutex access_mutex;
 
     // Where the current delivery should be taken
-    std::string destination;
+    int destination;
 
     // The current state of the mobile platform
     State state;
@@ -39,6 +40,9 @@ private:
 
     // Class to check for apriltags in the camera's view and let us know
     CameraChecker checker;
+
+    // 
+    MobileConfiguration config;
 };
 
 #endif
