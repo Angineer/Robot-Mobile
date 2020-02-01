@@ -5,6 +5,8 @@
 
 class MobileConfiguration {
 public:
+    MobileConfiguration();
+
     template <typename T>
     T getConfig ( const std::string& key );
 

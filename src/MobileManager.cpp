@@ -56,10 +56,13 @@ std::string MobileManager::handle_input ( const std::string& input ){
             iarchive ( destinationStr, items ); // Read the data from the archive
         }
 
-        std::cout << "Headed to " << destinationStr << std::endl;
-
         std::lock_guard<std::mutex> lock ( access_mutex );
-        destination = config.getConfig<int> ( destinationStr );
+        destination = config.getConfig<int> ( destinationStr + "_id" );
+
+        std::cout << "New order received; headed to "
+                  << destinationStr << " (" << destination << ")"
+                  << std::endl;
+
         state = State::DELIVER;
         arduino.sendByte ( 'd' ); // drive
     }
@@ -78,10 +81,11 @@ void MobileManager::handle_cam_update ( int location_id )
         // for the user to grab their snack, then head back home
         arduino.sendByte ( 'h' );
         state = State::RETURN;
-        std::this_thread::sleep_for ( std::chrono::seconds ( 2 ) );
+        std::this_thread::sleep_for ( std::chrono::seconds (
+            config.getConfig<int> ( "sleep_time_s" ) ) );
         arduino.sendByte ( 'd' );
     } else if ( state == State::RETURN &&
-                location_id == config.getConfig<int> ( "home") ) {
+                location_id == config.getConfig<int> ( "home_id" ) ) {
         // If we are on our way back from a delivery and have arrived at home,
         // stop and await new instructions
         arduino.sendByte ( 'h' );

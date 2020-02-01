@@ -22,7 +22,7 @@
 #define RIGHT_BACK_PIN 2
 #define LEFT_FWD_PIN   5
 #define LEFT_BACK_PIN  4
-#define MAX_SPEED 120 // Max speed for forward driving, 0-255
+#define MAX_SPEED 60 // Max speed for forward driving, 0-255
 
 // Eyeball sensor
 #define LOOK_PIN 11
