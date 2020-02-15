@@ -12,7 +12,9 @@ set ( APRILTAG_INCLUDE_FOLDER ${CMAKE_INSTALL_INCLUDEDIR}/apriltag CACHE FILEPAT
 
 # Mobile server
 add_executable ( mobile_server ./src/mobile_server.cpp
-                               ./src/CameraChecker.cpp
+                               ./src/CameraFetcher.cpp
+                               ./src/ImageBuffer.cpp
+                               ./src/ImageChecker.cpp
                                ./src/MobileConfiguration.cpp
                                ./src/MobileManager.cpp )
 set_property ( TARGET mobile_server PROPERTY CXX_STANDARD 14 )

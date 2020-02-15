@@ -4,7 +4,7 @@
 #include <mutex>
 
 #include <Arduino.h>
-#include "CameraChecker.h"
+#include "CameraFetcher.h"
 #include "MobileConfiguration.h"
 #include <Server.h>
 #include <State.h>
@@ -39,9 +39,9 @@ private:
     Server server;
 
     // Class to check for apriltags in the camera's view and let us know
-    CameraChecker checker;
+    CameraFetcher fetcher;
 
-    // 
+    // Configuration values
     MobileConfiguration config;
 };
 
