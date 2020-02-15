@@ -6,14 +6,13 @@
 
 #include <apriltag.h>
 
-// A class that runs a polling thread to read in the newest image from
-// the camera and check it for an apriltag. If one is found, it lets the
-// MobileManager know.
+// A class that holds image data read in by the CameraFetcher and makes it
+// available to the ImageChecker
 class ImageBuffer {
 public:
     // Constructor
-    // @param imagePath The location of the image on disk that this object
-    //        will check
+    // @param imagePath An image on disk that has the same dimensions as the
+    //        image we will be checking (used to initialize the buffer sizes)
     ImageBuffer ( const std::string & imagePath );
 
     // Destructor
@@ -22,9 +21,9 @@ public:
     // Read image data into the write buffer
     void readImage ( const std::string& imagePath );
 
-    // Update the read buffer to use the latest data, then get unprotected access
-    // to the read buffer. If a write is actively occurring, it will wait for the
-    // write to finish before opening the buffer.
+    // Update the read buffer to use the latest data, then get unprotected
+    // access to the read buffer. If a write is actively occurring, it will wait
+    // for the write to finish before opening the buffer.
     image_u8_t* getImage();
 
 private:

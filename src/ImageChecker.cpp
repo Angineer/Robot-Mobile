@@ -5,7 +5,8 @@
 ImageChecker::ImageChecker ( std::shared_ptr<ImageBuffer> buffer,
                              std::function<void ( int )> callback ) :
     m_Buffer ( buffer ),
-    m_StopFlag ( false )
+    m_StopFlag ( false ),
+    m_ReadyFlag ( false )
 {
     // Start checking
     auto checkFunc = [ callback, this ] {

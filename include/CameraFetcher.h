@@ -29,6 +29,10 @@ public:
 private:
     // Ask the camera for an image, wait for it to be written to disk,
     // read it in, and notify the image checker
+    // @param imagePath The location of the image on disk that this object
+    //        will look for
+    // @param callback A callback function to call when a new image has been
+    //        read in
     void processImages ( const std::string& imagePath,
                          std::function<void ( int )> callback );
 
