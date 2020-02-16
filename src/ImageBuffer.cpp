@@ -8,12 +8,14 @@ ImageBuffer::ImageBuffer ( const std::string & imagePath )
     std::tie ( m_Width, m_Height ) = readImageParameters ( imagePath );
 
     m_WriteBuff = image_u8_create ( m_Width, m_Height );
+    m_SwapBuff = image_u8_create ( m_Width, m_Height );
     m_ReadBuff = image_u8_create ( m_Width, m_Height );
 }
 
 ImageBuffer::~ImageBuffer()
 {
     image_u8_destroy ( m_WriteBuff );
+    image_u8_destroy ( m_SwapBuff );
     image_u8_destroy ( m_ReadBuff );
 }
 
@@ -38,7 +40,6 @@ std::tuple<long, long> ImageBuffer::readImageParameters (
 
 void ImageBuffer::readImage ( const std::string& imagePath )
 {
-    std::lock_guard<std::mutex> lock ( m_Mutex );
     std::ifstream reader { imagePath, std::ios_base::in | std::ios_base::binary };
 
     // Read in the data one pixel at a time and convert to grayscale as we do
@@ -56,11 +57,13 @@ void ImageBuffer::readImage ( const std::string& imagePath )
             m_WriteBuff->buf[( m_Height - y - 1)*m_WriteBuff->stride + x] = gray;
         }
     }
+    std::lock_guard<std::mutex> lock ( m_Mutex );
+    std::swap ( m_WriteBuff, m_SwapBuff );
 }
 
 image_u8_t* ImageBuffer::getImage()
 {
     std::lock_guard<std::mutex> lock ( m_Mutex );
-    std::swap ( m_WriteBuff, m_ReadBuff );
+    std::swap ( m_SwapBuff, m_ReadBuff );
     return m_ReadBuff;
 }

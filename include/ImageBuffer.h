@@ -18,12 +18,12 @@ public:
     // Destructor
     ~ImageBuffer();
 
-    // Read image data into the write buffer
+    // Read image data into the write buffer, then save it to the swap buffer so
+    // that it's available for reading
     void readImage ( const std::string& imagePath );
 
-    // Update the read buffer to use the latest data, then get unprotected
-    // access to the read buffer. If a write is actively occurring, it will wait
-    // for the write to finish before opening the buffer.
+    // Pull the latest data from the swap buffer into the read buffer, then get
+    // unprotected access to the read buffer
     image_u8_t* getImage();
 
 private:
@@ -37,9 +37,10 @@ private:
 
     // Internal buffers
     image_u8_t* m_WriteBuff;
+    image_u8_t* m_SwapBuff;
     image_u8_t* m_ReadBuff;
 
-    // Mutex to protect the image data buffers
+    // Mutex to protect the image data buffers when swapping
     std::mutex m_Mutex;
 };
 
