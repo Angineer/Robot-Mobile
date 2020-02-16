@@ -1,6 +1,7 @@
 #include "ImageChecker.h"
 
 #include <tag16h5.h>
+#include <iostream>
 
 ImageChecker::ImageChecker ( std::shared_ptr<ImageBuffer> buffer,
                              std::function<void ( int )> callback ) :
@@ -8,6 +9,10 @@ ImageChecker::ImageChecker ( std::shared_ptr<ImageBuffer> buffer,
     m_StopFlag ( false ),
     m_ReadyFlag ( false )
 {
+    m_Detector = apriltag_detector_create();
+    m_Family = tag16h5_create();
+    apriltag_detector_add_family ( m_Detector, m_Family );
+
     // Start checking
     auto checkFunc = [ callback, this ] {
         this->checkForTags ( callback );
@@ -22,6 +27,10 @@ ImageChecker::~ImageChecker()
     if ( m_Thread.joinable() ){
         m_Thread.join();
     }
+
+    // Clean up
+    tag16h5_destroy ( m_Family );
+    apriltag_detector_destroy ( m_Detector );
 }
 
 void ImageChecker::checkForTags ( std::function<void ( int )> callback )
@@ -39,11 +48,9 @@ void ImageChecker::checkForTags ( std::function<void ( int )> callback )
 
         // Check for apriltags
         int tag_id { -1 };
-        apriltag_detector_t *td = apriltag_detector_create();
-        apriltag_family_t *tf = tag16h5_create();
-        apriltag_detector_add_family(td, tf);
         //td->qtp.min_white_black_diff = 10;
-        zarray_t *detections = apriltag_detector_detect ( td, img );
+        zarray_t *detections =
+            apriltag_detector_detect ( m_Detector, img );
 
         for (int i = 0; i < zarray_size(detections); i++) {
             apriltag_detection_t *det;
@@ -56,15 +63,11 @@ void ImageChecker::checkForTags ( std::function<void ( int )> callback )
             apriltag_detection_destroy ( det );
         }
 
-        // Clean up
-        image_u8_destroy ( img );
         zarray_destroy ( detections );
-        tag16h5_destroy ( tf );
-        apriltag_detector_destroy ( td );
 
         // If we found one, let the MobileManager know
         if ( tag_id != -1 ){
-            //std::cout << "ID detected: " << tag_id << std::endl;
+            std::cout << "ID detected: " << tag_id << std::endl;
             callback ( tag_id );
         }
     }

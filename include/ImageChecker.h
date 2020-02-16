@@ -30,6 +30,10 @@ private:
     // call the callback
     void checkForTags ( std::function<void ( int )> callback );
 
+    // AprilTag objects
+    apriltag_detector_t * m_Detector;
+    apriltag_family_t * m_Family;
+
     // Thread to run the image check loop
     std::thread m_Thread;
 

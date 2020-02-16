@@ -1,6 +1,7 @@
 #include "ImageBuffer.h"
 
 #include <fstream>
+#include <iostream>
 
 ImageBuffer::ImageBuffer ( const std::string & imagePath )
 {
@@ -37,10 +38,10 @@ std::tuple<long, long> ImageBuffer::readImageParameters (
 
 void ImageBuffer::readImage ( const std::string& imagePath )
 {
+    std::lock_guard<std::mutex> lock ( m_Mutex );
     std::ifstream reader { imagePath, std::ios_base::in | std::ios_base::binary };
 
     // Read in the data one pixel at a time and convert to grayscale as we do
-    std::lock_guard<std::mutex> lock ( m_Mutex );
     char pixel_data[3];
     for ( unsigned long y = 0; y < m_Height; ++y ) {
         for ( unsigned long x = 0; x < m_Width; ++x ) {
