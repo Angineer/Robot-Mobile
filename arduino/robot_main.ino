@@ -17,12 +17,15 @@
 #include <Servo.h>
 
 /*** Configuration ***/
+// Debug mode. Prints out sensorbar readings to serial.
+#define DEBUG 0
+
 // Motor control
 #define RIGHT_FWD_PIN  3
 #define RIGHT_BACK_PIN 2
 #define LEFT_FWD_PIN   5
 #define LEFT_BACK_PIN  4
-#define MAX_SPEED 60 // Max speed for forward driving, 0-255
+#define MAX_SPEED 80 // Max speed for forward driving, 0-255
 
 // Eyeball sensor
 #define LOOK_PIN 11
@@ -33,6 +36,7 @@
 // Line sensor
 #define MOVING_AVG_WINDOW_SIZE 4
 #define CIRCULAR_BUFFER_SIZE 100
+#define DARK_LINE 0
 
 /*** Global vars ***/
 // The high-level instruction from the raspberry pi about what we should be
@@ -63,13 +67,24 @@ void setup(){
 
     // Line sensor
     mySensorBar.setBarStrobe(); // Turn on IR only during reads
-    //mySensorBar.clearBarStrobe(); // Run IR all the time
-    //mySensorBar.clearInvertBits(); // Dark line on light
-    mySensorBar.setInvertBits(); // Light line on dark
+    if ( DARK_LINE ) {
+        mySensorBar.clearInvertBits(); // Dark line on light
+    } else {
+        mySensorBar.setInvertBits(); // Light line on dark
+    }    
+    mySensorBar.clearBarStrobe(); // Run IR all the time
     mySensorBar.begin();
 }
 
 void loop(){
+    // Debug sensorbar readings
+    if ( DEBUG ) {
+        while ( true ) {
+            float linePos = readLineSensor();
+            Serial.println ( linePos );
+        }
+    }
+
     // Check if there is an update from the raspi
     if ( Serial.available() ) {
         directive = Serial.read();
