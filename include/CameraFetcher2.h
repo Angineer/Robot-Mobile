@@ -42,6 +42,9 @@ private:
     void read_bmp ( std::shared_ptr<ImageBuffer> buffer,
                     const std::string& file );
 
+    // Get the camera ready for access via mmal; based on raspistill
+    bool startCamera();
+
     // PID of the raspistill process that will take the actual pictures
     unsigned int m_CamPid;
 
