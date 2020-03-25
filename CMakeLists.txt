@@ -16,7 +16,8 @@ set ( RASPI_INCLUDE_FOLDER /opt/vc/include CACHE FILEPATH "Raspi include folder"
 
 # Mobile server
 add_executable ( mobile_server ./src/mobile_server.cpp
-                               ./src/CameraFetcher2.cpp
+                               ./src/Camera.cpp
+                               ./src/CameraFetcher.cpp
                                ./src/ImageBuffer.cpp
                                ./src/ImageChecker.cpp
                                ./src/MobileConfiguration.cpp
