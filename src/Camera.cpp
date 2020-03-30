@@ -38,25 +38,26 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#include <stdlib.h>
 //#include <ctype.h>
 //#include <string.h>
+#include <iostream>
 //#include <memory.h>
 //#include <unistd.h>
 //#include <errno.h>
 //#include <sysexits.h>
 
-//#include "bcm_host.h"
+#include "bcm_host.h"
 //#include "interface/vcos/vcos.h"
 
 //#include "interface/mmal/mmal_logging.h"
 //#include "interface/mmal/mmal_buffer.h"
 //#include "interface/mmal/util/mmal_util.h"
-//#include "interface/mmal/util/mmal_util_params.h"
-//#include "interface/mmal/util/mmal_default_components.h"
+#include "interface/mmal/util/mmal_util_params.h"
+#include "interface/mmal/util/mmal_default_components.h"
 //#include "interface/mmal/mmal_parameters_camera.h"
 
 //#include "RaspiPreview.h"
 //#include "RaspiCLI.h"
 //#include "RaspiTex.h"
-//#include "RaspiHelpers.h"
+#include "RaspiHelpers.h"
 
 //#include "RaspiGPS.h"
 
@@ -127,31 +128,15 @@ void Camera::reset()
    m_Settings.demoMode = 0;
    m_Settings.demoInterval = 250; // ms
    m_Settings.camera_component = NULL;
-   m_Settings.encoder_component = NULL;
-   m_Settings.preview_connection = NULL;
-   m_Settings.encoder_connection = NULL;
-   m_Settings.encoder_pool = NULL;
-   m_Settings.encoding = MMAL_ENCODING_JPEG;
-   m_Settings.numExifTags = 0;
-   m_Settings.enableExifTags = 1;
-   m_Settings.timelapse = 0;
-   m_Settings.fullResPreview = 0;
-   m_Settings.frameNextMethod = FRAME_NEXT_SINGLE;
-   m_Settings.useGL = 0;
-   m_Settings.glCapture = 0;
-   m_Settings.burstCaptureMode=0;
-   m_Settings.datetime = 0;
-   m_Settings.timestamp = 0;
-   m_Settings.restart_interval = 0;
 
    // Setup preview window defaults
-   raspipreview_set_defaults(&m_Settings.preview_parameters);
+   //raspipreview_set_defaults(&m_Settings.preview_parameters);
 
    // Set up the camera_parameters to default
    raspicamcontrol_set_defaults(&m_Settings.camera_parameters);
 
    // Set initial GL preview state
-   raspitex_set_defaults(&m_Settings.raspitex_state);
+   //raspitex_set_defaults(&m_Settings.raspitex_state);
 }
 
 /**
@@ -292,48 +277,47 @@ MMAL_STATUS_T Camera::createMmalComponent()
 
    if (status != MMAL_SUCCESS)
    {
-      vcos_log_error("Failed to create camera component");
-      goto error;
+       std::cout << "Failed to create camera component" << std::endl;
+       throw std::exception();
    }
 
-   status = raspicamcontrol_set_stereo_mode(camera->output[0], &state->camera_parameters.stereo_mode);
-   status += raspicamcontrol_set_stereo_mode(camera->output[1], &state->camera_parameters.stereo_mode);
-   status += raspicamcontrol_set_stereo_mode(camera->output[2], &state->camera_parameters.stereo_mode);
+   status = static_cast<MMAL_STATUS_T> (
+        raspicamcontrol_set_stereo_mode(camera->output[0], &m_Settings.camera_parameters.stereo_mode) +
+        raspicamcontrol_set_stereo_mode(camera->output[1], &m_Settings.camera_parameters.stereo_mode) +
+        raspicamcontrol_set_stereo_mode(camera->output[2], &m_Settings.camera_parameters.stereo_mode) );
 
    if (status != MMAL_SUCCESS)
    {
-      vcos_log_error("Could not set stereo mode : error %d", status);
-      goto error;
+       std::cout << "Could not set stereo mode : error " << status << std::endl;
+       throw std::exception();
    }
 
    MMAL_PARAMETER_INT32_T camera_num =
-   {{MMAL_PARAMETER_CAMERA_NUM, sizeof(camera_num)}, state->common_settings.cameraNum};
+   {{MMAL_PARAMETER_CAMERA_NUM, sizeof(camera_num)}, m_Settings.common_settings.cameraNum};
 
    status = mmal_port_parameter_set(camera->control, &camera_num.hdr);
 
    if (status != MMAL_SUCCESS)
    {
-      vcos_log_error("Could not select camera : error %d", status);
-      goto error;
+       std::cout << "Could not select camera : error " << status << std::endl;
+       throw std::exception();
    }
 
    if (!camera->output_num)
    {
       status = MMAL_ENOSYS;
-      vcos_log_error("Camera doesn't have output ports");
-      goto error;
+      std::cout << "Camera doesn't have output ports" << std::endl;
+      throw std::exception();
    }
 
-   status = mmal_port_parameter_set_uint32(camera->control, MMAL_PARAMETER_CAMERA_CUSTOM_SENSOR_CONFIG, state->common_settings.sensor_mode);
+   status = mmal_port_parameter_set_uint32(camera->control, MMAL_PARAMETER_CAMERA_CUSTOM_SENSOR_CONFIG, m_Settings.common_settings.sensor_mode);
 
    if (status != MMAL_SUCCESS)
    {
-      vcos_log_error("Could not set sensor mode : error %d", status);
-      goto error;
+       std::cout << "Could not set sensor mode : error " << status << std::endl;
+       throw std::exception();
    }
 
-   preview_port = camera->output[MMAL_CAMERA_PREVIEW_PORT];
-   video_port = camera->output[MMAL_CAMERA_VIDEO_PORT];
    still_port = camera->output[MMAL_CAMERA_CAPTURE_PORT];
 
    // Enable the camera, and tell it its control callback function
@@ -341,8 +325,8 @@ MMAL_STATUS_T Camera::createMmalComponent()
 
    if (status != MMAL_SUCCESS)
    {
-      vcos_log_error("Unable to enable control port : error %d", status);
-      goto error;
+       std::cout << "Unable to enable control port : error " << status << std::endl;
+       throw std::exception();
    }
 
    //  set up the camera configuration
@@ -350,106 +334,34 @@ MMAL_STATUS_T Camera::createMmalComponent()
       MMAL_PARAMETER_CAMERA_CONFIG_T cam_config =
       {
          { MMAL_PARAMETER_CAMERA_CONFIG, sizeof(cam_config) },
-         .max_stills_w = state->common_settings.width,
-         .max_stills_h = state->common_settings.height,
+         .max_stills_w = m_Settings.common_settings.width,
+         .max_stills_h = m_Settings.common_settings.height,
          .stills_yuv422 = 0,
          .one_shot_stills = 1,
-         .max_preview_video_w = state->preview_parameters.previewWindow.width,
-         .max_preview_video_h = state->preview_parameters.previewWindow.height,
+         .max_preview_video_w = m_Settings.common_settings.width,
+         .max_preview_video_h = m_Settings.common_settings.height,
          .num_preview_video_frames = 3,
          .stills_capture_circular_buffer_height = 0,
          .fast_preview_resume = 0,
          .use_stc_timestamp = MMAL_PARAM_TIMESTAMP_MODE_RESET_STC
       };
 
-      if (state->fullResPreview)
-      {
-         cam_config.max_preview_video_w = state->common_settings.width;
-         cam_config.max_preview_video_h = state->common_settings.height;
-      }
-
       mmal_port_parameter_set(camera->control, &cam_config.hdr);
    }
 
-   raspicamcontrol_set_all_parameters(camera, &state->camera_parameters);
+   raspicamcontrol_set_all_parameters(camera, &m_Settings.camera_parameters);
 
    // Now set up the port formats
-
-   format = preview_port->format;
-   format->encoding = MMAL_ENCODING_OPAQUE;
-   format->encoding_variant = MMAL_ENCODING_I420;
-
-   if(state->camera_parameters.shutter_speed > 6000000)
-   {
-      MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
-         { 50, 1000 }, {166, 1000}
-      };
-      mmal_port_parameter_set(preview_port, &fps_range.hdr);
-   }
-   else if(state->camera_parameters.shutter_speed > 1000000)
-   {
-      MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
-         { 166, 1000 }, {999, 1000}
-      };
-      mmal_port_parameter_set(preview_port, &fps_range.hdr);
-   }
-   if (state->fullResPreview)
-   {
-      // In this mode we are forcing the preview to be generated from the full capture resolution.
-      // This runs at a max of 15fps with the OV5647 sensor.
-      format->es->video.width = VCOS_ALIGN_UP(state->common_settings.width, 32);
-      format->es->video.height = VCOS_ALIGN_UP(state->common_settings.height, 16);
-      format->es->video.crop.x = 0;
-      format->es->video.crop.y = 0;
-      format->es->video.crop.width = state->common_settings.width;
-      format->es->video.crop.height = state->common_settings.height;
-      format->es->video.frame_rate.num = FULL_RES_PREVIEW_FRAME_RATE_NUM;
-      format->es->video.frame_rate.den = FULL_RES_PREVIEW_FRAME_RATE_DEN;
-   }
-   else
-   {
-      // Use a full FOV 4:3 mode
-      format->es->video.width = VCOS_ALIGN_UP(state->preview_parameters.previewWindow.width, 32);
-      format->es->video.height = VCOS_ALIGN_UP(state->preview_parameters.previewWindow.height, 16);
-      format->es->video.crop.x = 0;
-      format->es->video.crop.y = 0;
-      format->es->video.crop.width = state->preview_parameters.previewWindow.width;
-      format->es->video.crop.height = state->preview_parameters.previewWindow.height;
-      format->es->video.frame_rate.num = PREVIEW_FRAME_RATE_NUM;
-      format->es->video.frame_rate.den = PREVIEW_FRAME_RATE_DEN;
-   }
-
-   status = mmal_port_format_commit(preview_port);
-   if (status != MMAL_SUCCESS)
-   {
-      vcos_log_error("camera viewfinder format couldn't be set");
-      goto error;
-   }
-
-   // Set the same format on the video  port (which we don't use here)
-   mmal_format_full_copy(video_port->format, format);
-   status = mmal_port_format_commit(video_port);
-
-   if (status  != MMAL_SUCCESS)
-   {
-      vcos_log_error("camera video format couldn't be set");
-      goto error;
-   }
-
-   // Ensure there are enough buffers to avoid dropping frames
-   if (video_port->buffer_num < VIDEO_OUTPUT_BUFFERS_NUM)
-      video_port->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;
-
    format = still_port->format;
 
-   if(state->camera_parameters.shutter_speed > 6000000)
+   if(m_Settings.camera_parameters.shutter_speed > 6000000)
    {
       MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
          { 50, 1000 }, {166, 1000}
       };
       mmal_port_parameter_set(still_port, &fps_range.hdr);
    }
-   else if(state->camera_parameters.shutter_speed > 1000000)
+   else if(m_Settings.camera_parameters.shutter_speed > 1000000)
    {
       MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
          { 167, 1000 }, {999, 1000}
@@ -458,12 +370,12 @@ MMAL_STATUS_T Camera::createMmalComponent()
    }
    // Set our stills format on the stills (for encoder) port
    format->encoding = MMAL_ENCODING_OPAQUE;
-   format->es->video.width = VCOS_ALIGN_UP(state->common_settings.width, 32);
-   format->es->video.height = VCOS_ALIGN_UP(state->common_settings.height, 16);
+   format->es->video.width = VCOS_ALIGN_UP(m_Settings.common_settings.width, 32);
+   format->es->video.height = VCOS_ALIGN_UP(m_Settings.common_settings.height, 16);
    format->es->video.crop.x = 0;
    format->es->video.crop.y = 0;
-   format->es->video.crop.width = state->common_settings.width;
-   format->es->video.crop.height = state->common_settings.height;
+   format->es->video.crop.width = m_Settings.common_settings.width;
+   format->es->video.crop.height = m_Settings.common_settings.height;
    format->es->video.frame_rate.num = STILLS_FRAME_RATE_NUM;
    format->es->video.frame_rate.den = STILLS_FRAME_RATE_DEN;
 
@@ -471,8 +383,8 @@ MMAL_STATUS_T Camera::createMmalComponent()
 
    if (status != MMAL_SUCCESS)
    {
-      vcos_log_error("camera still format couldn't be set");
-      goto error;
+       std::cout << "camera still format couldn't be set" << std::endl;
+      throw std::exception();
    }
 
    /* Ensure there are enough buffers to avoid dropping frames */
@@ -484,23 +396,13 @@ MMAL_STATUS_T Camera::createMmalComponent()
 
    if (status != MMAL_SUCCESS)
    {
-      vcos_log_error("camera component couldn't be enabled");
-      goto error;
+       std::cout << "camera component couldn't be enabled" << std::endl;
+        throw std::exception();
    }
 
-   if (state->useGL)
-   {
-      status = raspitex_configure_preview_port(&state->raspitex_state, preview_port);
-      if (status != MMAL_SUCCESS)
-      {
-         fprintf(stderr, "Failed to configure preview port for GL rendering");
-         goto error;
-      }
-   }
+   m_Settings.camera_component = camera;
 
-   state->camera_component = camera;
-
-   if (state->common_settings.verbose)
+   if (m_Settings.common_settings.verbose)
       fprintf(stderr, "Camera component done\n");
 
    return status;
@@ -515,10 +417,10 @@ error:
 
 void Camera::destroyMmalComponent()
 {
-   if (state->camera_component)
+   if (m_Settings.camera_component)
    {
-      mmal_component_destroy(state->camera_component);
-      state->camera_component = NULL;
+      mmal_component_destroy(m_Settings.camera_component);
+      m_Settings.camera_component = NULL;
    }
 }
 
@@ -544,25 +446,25 @@ void Camera::run()
 
     bcm_host_init();
 
-    default_status(&state);
+    reset();
 
     // Setup for sensor specific parameters
-    get_sensor_defaults(state.common_settings.cameraNum, state.common_settings.camera_name,
-                       &state.common_settings.width, &state.common_settings.height);
+    get_sensor_defaults(m_Settings.common_settings.cameraNum, m_Settings.common_settings.camera_name,
+                       &m_Settings.common_settings.width, &m_Settings.common_settings.height);
 
     // OK, we have a nice set of parameters. Now set up our components
     // We have three components. Camera, Preview and encoder.
     // Camera and encoder are different in stills/video, but preview
     // is the same so handed off to a separate module
 
-    if ((status = create_camera_component(&state)) != MMAL_SUCCESS) {
+    if ((status = createMmalComponent()) != MMAL_SUCCESS) {
        std::cout << "Failed to create camera component" << std::endl;
        return;
     }
 
     PORT_USERDATA callback_data;
 
-    camera_still_port = state.camera_component->output[MMAL_CAMERA_CAPTURE_PORT];
+    camera_still_port = m_Settings.camera_component->output[MMAL_CAMERA_CAPTURE_PORT];
 
  VCOS_STATUS_T vcos_status;
 
@@ -580,13 +482,13 @@ void Camera::run()
     char *use_filename = NULL;      // Temporary filename while image being written
     char *final_filename = NULL;    // Name that file gets once writing complete
 
-    frame = state.frameStart - 1;
+    frame = m_Settings.frameStart - 1;
 
     while (keep_looping)
     {
        keep_looping = wait_for_next_frame(&state, &frame);
 
-       if (state.datetime)
+       if (m_Settings.datetime)
        {
           time_t rawtime;
           struct tm *timeinfo;
@@ -604,7 +506,7 @@ void Camera::run()
           frame *= 100;
           frame += timeinfo->tm_sec;
        }
-       if (state.timestamp)
+       if (m_Settings.timestamp)
        {
           frame = (int)time(NULL);
        }
@@ -615,31 +517,24 @@ void Camera::run()
 
           // Must do this before the encoder output port is enabled since
           // once enabled no further exif data is accepted
-          if ( state.enableExifTags )
-          {
-             struct gps_data_t *gps_data = raspi_gps_lock();
-             add_exif_tags(&state, gps_data);
-             raspi_gps_unlock();
-          }
-          else
           {
              mmal_port_parameter_set_boolean(
-                state.encoder_component->output[0], MMAL_PARAMETER_EXIF_DISABLE, 1);
+                m_Settings.encoder_component->output[0], MMAL_PARAMETER_EXIF_DISABLE, 1);
           }
 
           // Same with raw, apparently need to set it for each capture, whilst port
           // is not enabled
-          if (state.wantRAW)
+          if (m_Settings.wantRAW)
           {
              if (mmal_port_parameter_set_boolean(camera_still_port, MMAL_PARAMETER_ENABLE_RAW_CAPTURE, 1) != MMAL_SUCCESS)
              {
-                vcos_log_error("RAW was requested, but failed to enable");
+                 std::cout << "RAW was requested, but failed to enable" << std::endl;
              }
           }
 
           // There is a possibility that shutter needs to be set each loop.
-          if (mmal_status_to_int(mmal_port_parameter_set_uint32(state.camera_component->control, MMAL_PARAMETER_SHUTTER_SPEED, state.camera_parameters.shutter_speed)) != MMAL_SUCCESS)
-             vcos_log_error("Unable to set shutter speed");
+          if (mmal_status_to_int(mmal_port_parameter_set_uint32(m_Settings.camera_component->control, MMAL_PARAMETER_SHUTTER_SPEED, m_Settings.camera_parameters.shutter_speed)) != MMAL_SUCCESS)
+             std::cout << "Unable to set shutter speed" << std::endl;
 
           // Enable the encoder output port
           encoder_output_port->userdata = (struct MMAL_PORT_USERDATA_T *)&callback_data;
@@ -648,58 +543,53 @@ void Camera::run()
           status = mmal_port_enable(encoder_output_port, encoder_buffer_callback);
 
           // Send all the buffers to the encoder output port
-          num = mmal_queue_length(state.encoder_pool->queue);
+          num = mmal_queue_length(m_Settings.encoder_pool->queue);
 
           for (q=0; q<num; q++)
           {
-             MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(state.encoder_pool->queue);
+             MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(m_Settings.encoder_pool->queue);
 
              if (!buffer)
-                vcos_log_error("Unable to get a required buffer %d from pool queue", q);
+                std::cout << "Unable to get a required buffer from pool queue" << std::endl;
 
              if (mmal_port_send_buffer(encoder_output_port, buffer)!= MMAL_SUCCESS)
-                vcos_log_error("Unable to send a buffer to encoder output port (%d)", q);
+                std::cout << "Unable to send a buffer to encoder output port" << std::endl;
           }
 
-          if (state.burstCaptureMode)
+          if(m_Settings.camera_parameters.enable_annotate)
           {
-             mmal_port_parameter_set_boolean(state.camera_component->control,  MMAL_PARAMETER_CAMERA_BURST_CAPTURE, 1);
-          }
-
-          if(state.camera_parameters.enable_annotate)
-          {
-             if ((state.camera_parameters.enable_annotate & ANNOTATE_APP_TEXT) && state.common_settings.gps)
+             if ((m_Settings.camera_parameters.enable_annotate & ANNOTATE_APP_TEXT) && m_Settings.common_settings.gps)
              {
                 char *text = raspi_gps_location_string();
-                raspicamcontrol_set_annotate(state.camera_component, state.camera_parameters.enable_annotate,
+                raspicamcontrol_set_annotate(m_Settings.camera_component, m_Settings.camera_parameters.enable_annotate,
                                              text,
-                                             state.camera_parameters.annotate_text_size,
-                                             state.camera_parameters.annotate_text_colour,
-                                             state.camera_parameters.annotate_bg_colour,
-                                             state.camera_parameters.annotate_justify,
-                                             state.camera_parameters.annotate_x,
-                                             state.camera_parameters.annotate_y
+                                             m_Settings.camera_parameters.annotate_text_size,
+                                             m_Settings.camera_parameters.annotate_text_colour,
+                                             m_Settings.camera_parameters.annotate_bg_colour,
+                                             m_Settings.camera_parameters.annotate_justify,
+                                             m_Settings.camera_parameters.annotate_x,
+                                             m_Settings.camera_parameters.annotate_y
                                             );
                 free(text);
              }
              else
-                raspicamcontrol_set_annotate(state.camera_component, state.camera_parameters.enable_annotate,
-                                             state.camera_parameters.annotate_string,
-                                             state.camera_parameters.annotate_text_size,
-                                             state.camera_parameters.annotate_text_colour,
-                                             state.camera_parameters.annotate_bg_colour,
-                                             state.camera_parameters.annotate_justify,
-                                             state.camera_parameters.annotate_x,
-                                             state.camera_parameters.annotate_y
+                raspicamcontrol_set_annotate(m_Settings.camera_component, m_Settings.camera_parameters.enable_annotate,
+                                             m_Settings.camera_parameters.annotate_string,
+                                             m_Settings.camera_parameters.annotate_text_size,
+                                             m_Settings.camera_parameters.annotate_text_colour,
+                                             m_Settings.camera_parameters.annotate_bg_colour,
+                                             m_Settings.camera_parameters.annotate_justify,
+                                             m_Settings.camera_parameters.annotate_x,
+                                             m_Settings.camera_parameters.annotate_y
                                             );
           }
 
-          if (state.common_settings.verbose)
+          if (m_Settings.common_settings.verbose)
              fprintf(stderr, "Starting capture %d\n", frame);
 
           if (mmal_port_parameter_set_boolean(camera_still_port, MMAL_PARAMETER_CAPTURE, 1) != MMAL_SUCCESS)
           {
-             vcos_log_error("%s: Failed to start capture", __func__);
+              std::cout << "Failed to start capture" << std::endl;
           }
           else
           {
@@ -707,7 +597,7 @@ void Camera::run()
              // For some reason using vcos_semaphore_wait_timeout sometimes returns immediately with bad parameter error
              // even though it appears to be all correct, so reverting to untimed one until figure out why its erratic
              vcos_semaphore_wait(&callback_data.complete_semaphore);
-             if (state.common_settings.verbose)
+             if (m_Settings.common_settings.verbose)
                 fprintf(stderr, "Finished capture %d\n", frame);
           }
 
@@ -741,8 +631,8 @@ void Camera::run()
     vcos_semaphore_delete(&callback_data.complete_semaphore);
  }
 
-  if (state.camera_component)
-     mmal_component_disable(state.camera_component);
+  if (m_Settings.camera_component)
+     mmal_component_disable(m_Settings.camera_component);
 
   //destroy_camera_component(&state);
 }
