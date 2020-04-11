@@ -4,11 +4,14 @@ project ( robot-mobile )
 # Need threads
 find_package ( Threads )
 
+# Also build custom version of raspistill
+add_subdirectory ( raspicam )
+
 # Cereal
 set ( CEREAL_INCLUDE_FOLDER ../cereal/include CACHE FILEPATH "Cereal include folder" )
 
 # AprilTags
-set ( APRILTAG_INCLUDE_FOLDER ${CMAKE_INSTALL_INCLUDEDIR}/apriltag CACHE FILEPATH "AprilTag include folder" )
+set ( APRILTAG_INCLUDE_FOLDER /usr/local/include/apriltag CACHE FILEPATH "AprilTag include folder" )
 
 # Mobile server
 add_executable ( mobile_server ./src/mobile_server.cpp

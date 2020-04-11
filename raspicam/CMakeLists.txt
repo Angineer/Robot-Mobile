@@ -1,5 +1,4 @@
-
-# raspistill/raspivid/raspiyuv
+# Slimmed down version of raspistill
 
 SET(COMPILE_DEFINITIONS -Werror)
 
@@ -41,6 +40,10 @@ set (EGL_SOURCES RaspiTexStub.c)
 
 add_executable(raspistill ${COMMON_SOURCES} RaspiStill.c ${EGL_SOURCES} )
 
-set (MMAL_LIBS /opt/vc/lib/libmmal_core.so /opt/vc/lib/libmmal_util.so /opt/vc/lib/libmmal_vc_client.so)
+set ( MMAL_LIBS /opt/vc/lib/libmmal_core.so
+                /opt/vc/lib/libmmal_util.so
+                /opt/vc/lib/libmmal_vc_client.so )
+set ( OTHER_LIBS /opt/vc/lib/libbcm_host.so
+                 /opt/vc/lib/libvcos.so )
 #set (MMAL_LIBS mmal_core mmal_util mmal_vc_client)
-target_link_libraries(raspistill ${MMAL_LIBS} vcos bcm_host ${EGL_LIBS} m dl pthread)
+target_link_libraries(raspistill ${MMAL_LIBS} ${OTHER_LIBS} ${EGL_LIBS} m dl pthread)
