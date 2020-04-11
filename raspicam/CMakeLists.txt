@@ -40,6 +40,7 @@ set ( EGL_SOURCES RaspiTexStub.c )
 
 add_library ( raspistill SHARED
               ${COMMON_SOURCES}
+              RaspiCam.c
               RaspiStill.c
               ${EGL_SOURCES} )
 
