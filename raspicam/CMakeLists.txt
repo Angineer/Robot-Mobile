@@ -27,23 +27,32 @@ execute_process(
 )
 add_definitions("-DGIT_TAINTED=${GIT_TAINTED}")
 
-set (COMMON_SOURCES
-   RaspiCamControl.c
-   RaspiCLI.c
-   RaspiPreview.c
-   RaspiCommonSettings.c
-   RaspiHelpers.c
-   RaspiGPS.c
-   libgps_loader.c)
+set ( COMMON_SOURCES
+      RaspiCamControl.c
+      RaspiCLI.c
+      RaspiPreview.c
+      RaspiCommonSettings.c
+      RaspiHelpers.c
+      RaspiGPS.c
+      libgps_loader.c )
 
-set (EGL_SOURCES RaspiTexStub.c)
+set ( EGL_SOURCES RaspiTexStub.c )
 
-add_executable(raspistill ${COMMON_SOURCES} RaspiStill.c ${EGL_SOURCES} )
+add_library ( raspistill SHARED
+              ${COMMON_SOURCES}
+              RaspiStill.c
+              ${EGL_SOURCES} )
+
+find_package ( Threads )
 
 set ( MMAL_LIBS /opt/vc/lib/libmmal_core.so
                 /opt/vc/lib/libmmal_util.so
                 /opt/vc/lib/libmmal_vc_client.so )
 set ( OTHER_LIBS /opt/vc/lib/libbcm_host.so
-                 /opt/vc/lib/libvcos.so )
-#set (MMAL_LIBS mmal_core mmal_util mmal_vc_client)
-target_link_libraries(raspistill ${MMAL_LIBS} ${OTHER_LIBS} ${EGL_LIBS} m dl pthread)
+                 /opt/vc/lib/libvcos.so
+                 ${CMAKE_THREAD_LIBS_INIT}
+                 m dl )
+
+target_include_directories ( raspistill PUBLIC ${PROJECT_SOURCE_DIR}
+                                               /opt/vc/include )
+target_link_libraries ( raspistill ${MMAL_LIBS} ${OTHER_LIBS} )
