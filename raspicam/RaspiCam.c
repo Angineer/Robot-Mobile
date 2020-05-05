@@ -214,217 +214,87 @@ void capture ( RASPISTILL_STATE* state ) {
         goto error;
 
     /**********************************/
-     {
-        int frame, keep_looping = 1;
-        FILE *output_file = NULL;
-        char *use_filename = NULL;      // Temporary filename while image being written
-        char *final_filename = NULL;    // Name that file gets once writing complete
+    // Capture a single image
+    int frame, keep_looping = 1;
+    FILE *output_file = NULL;
 
-        frame = state->frameStart - 1;
+    frame = state->frameStart - 1;
 
-        while (keep_looping)
+    // Keep it simple for the moment
+    output_file = stdout;
+    callback_data.file_handle = output_file;
+
+    if (output_file)
+    {
+        int num, q;
+
+        // Disable EXIF
         {
-           keep_looping = wait_for_next_frame(state, &frame);
+           mmal_port_parameter_set_boolean(
+              state->encoder_component->output[0], MMAL_PARAMETER_EXIF_DISABLE, 1);
+        }
 
-           if (state->datetime)
+        // Same with raw, apparently need to set it for each capture, whilst port
+        // is not enabled
+        if (state->wantRAW)
+        {
+           if (mmal_port_parameter_set_boolean(camera_still_port, MMAL_PARAMETER_ENABLE_RAW_CAPTURE, 1) != MMAL_SUCCESS)
            {
-              time_t rawtime;
-              struct tm *timeinfo;
-
-              time(&rawtime);
-              timeinfo = localtime(&rawtime);
-
-              frame = timeinfo->tm_mon+1;
-              frame *= 100;
-              frame += timeinfo->tm_mday;
-              frame *= 100;
-              frame += timeinfo->tm_hour;
-              frame *= 100;
-              frame += timeinfo->tm_min;
-              frame *= 100;
-              frame += timeinfo->tm_sec;
+              vcos_log_error("RAW was requested, but failed to enable");
            }
-           if (state->timestamp)
-           {
-              frame = (int)time(NULL);
-           }
+        }
 
-           // Open the file
-           if (state->common_settings.filename)
-           {
-              if (state->common_settings.filename[0] == '-')
-              {
-                 output_file = stdout;
-              }
-              else
-              {
-                 vcos_assert(use_filename == NULL && final_filename == NULL);
-                 status = create_filenames(&final_filename, &use_filename, state->common_settings.filename, frame);
-                 if (status  != MMAL_SUCCESS)
-                 {
-                    vcos_log_error("Unable to create filenames");
-                    goto error;
-                 }
+        // There is a possibility that shutter needs to be set each loop.
+        if (mmal_status_to_int(mmal_port_parameter_set_uint32(state->camera_component->control, MMAL_PARAMETER_SHUTTER_SPEED, state->camera_parameters.shutter_speed)) != MMAL_SUCCESS)
+           vcos_log_error("Unable to set shutter speed");
 
-                 if (state->common_settings.verbose)
-                    fprintf(stderr, "Opening output file %s\n", final_filename);
-                 // Technically it is opening the temp~ filename which will be renamed to the final filename
+        // Enable the encoder output port and tell it its callback function
+        fprintf(stderr, "Enabling encoder output port\n");
 
-                 output_file = fopen(use_filename, "wb");
+        encoder_output_port->userdata = (struct MMAL_PORT_USERDATA_T *)&callback_data;
+        status = mmal_port_enable(encoder_output_port, encoder_buffer_callback);
 
-                 if (!output_file)
-                 {
-                    // Notify user, carry on but discarding encoded output buffers
-                    vcos_log_error("%s: Error opening output file: %s\nNo output file will be generated\n", __func__, use_filename);
-                 }
-              }
+        // Send all the buffers to the encoder output port
+        num = mmal_queue_length(state->encoder_pool->queue);
 
-              callback_data.file_handle = output_file;
-           }
+        for (q=0; q<num; q++)
+        {
+           MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(state->encoder_pool->queue);
 
-           // We only capture if a filename was specified and it opened
-           if (state->useGL && state->glCapture && output_file)
-           {
-              /* Save the next GL framebuffer as the next camera still */
-              int rc = raspitex_capture(&state->raspitex_state, output_file);
-              if (rc != 0)
-                 vcos_log_error("Failed to capture GL preview");
-              rename_file(state, output_file, final_filename, use_filename, frame);
-           }
-           else if (output_file)
-           {
-              int num, q;
+           if (!buffer)
+              vcos_log_error("Unable to get a required buffer %d from pool queue", q);
 
-              // Must do this before the encoder output port is enabled since
-              // once enabled no further exif data is accepted
-              if ( state->enableExifTags )
-              {
-                 struct gps_data_t *gps_data = raspi_gps_lock();
-                 add_exif_tags(state);
-                 raspi_gps_unlock();
-              }
-              else
-              {
-                 mmal_port_parameter_set_boolean(
-                    state->encoder_component->output[0], MMAL_PARAMETER_EXIF_DISABLE, 1);
-              }
+           if (mmal_port_send_buffer(encoder_output_port, buffer)!= MMAL_SUCCESS)
+              vcos_log_error("Unable to send a buffer to encoder output port (%d)", q);
+        }
 
-              // Same with raw, apparently need to set it for each capture, whilst port
-              // is not enabled
-              if (state->wantRAW)
-              {
-                 if (mmal_port_parameter_set_boolean(camera_still_port, MMAL_PARAMETER_ENABLE_RAW_CAPTURE, 1) != MMAL_SUCCESS)
-                 {
-                    vcos_log_error("RAW was requested, but failed to enable");
-                 }
-              }
+        fprintf(stderr, "Starting capture %d\n", frame);
 
-              // There is a possibility that shutter needs to be set each loop.
-              if (mmal_status_to_int(mmal_port_parameter_set_uint32(state->camera_component->control, MMAL_PARAMETER_SHUTTER_SPEED, state->camera_parameters.shutter_speed)) != MMAL_SUCCESS)
-                 vcos_log_error("Unable to set shutter speed");
+        // Perform the capture
+        if (mmal_port_parameter_set_boolean(camera_still_port, MMAL_PARAMETER_CAPTURE, 1) != MMAL_SUCCESS)
+        {
+           vcos_log_error("%s: Failed to start capture", __func__);
+        }
+        else
+        {
+           // Wait for capture to complete
+           // For some reason using vcos_semaphore_wait_timeout sometimes returns immediately with bad parameter error
+           // even though it appears to be all correct, so reverting to untimed one until figure out why its erratic
+           vcos_semaphore_wait(&callback_data.complete_semaphore);
+           if (state->common_settings.verbose)
+              fprintf(stderr, "Finished capture %d\n", frame);
+        }
 
-              // Enable the encoder output port
-              encoder_output_port->userdata = (struct MMAL_PORT_USERDATA_T *)&callback_data;
+        // Ensure we don't die if get callback with no open file
+        callback_data.file_handle = NULL;
 
-              if (state->common_settings.verbose)
-                 fprintf(stderr, "Enabling encoder output port\n");
+        fflush(output_file);
 
-              // Enable the encoder output port and tell it its callback function
-              status = mmal_port_enable(encoder_output_port, encoder_buffer_callback);
+        // Disable encoder output port
+        status = mmal_port_disable(encoder_output_port);
+    }
 
-              // Send all the buffers to the encoder output port
-              num = mmal_queue_length(state->encoder_pool->queue);
-
-              for (q=0; q<num; q++)
-              {
-                 MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(state->encoder_pool->queue);
-
-                 if (!buffer)
-                    vcos_log_error("Unable to get a required buffer %d from pool queue", q);
-
-                 if (mmal_port_send_buffer(encoder_output_port, buffer)!= MMAL_SUCCESS)
-                    vcos_log_error("Unable to send a buffer to encoder output port (%d)", q);
-              }
-
-              if (state->burstCaptureMode)
-              {
-                 mmal_port_parameter_set_boolean(state->camera_component->control,  MMAL_PARAMETER_CAMERA_BURST_CAPTURE, 1);
-              }
-
-              if(state->camera_parameters.enable_annotate)
-              {
-                 if ((state->camera_parameters.enable_annotate & ANNOTATE_APP_TEXT) && state->common_settings.gps)
-                 {
-                    char *text = raspi_gps_location_string();
-                    raspicamcontrol_set_annotate(state->camera_component, state->camera_parameters.enable_annotate,
-                                                 text,
-                                                 state->camera_parameters.annotate_text_size,
-                                                 state->camera_parameters.annotate_text_colour,
-                                                 state->camera_parameters.annotate_bg_colour,
-                                                 state->camera_parameters.annotate_justify,
-                                                 state->camera_parameters.annotate_x,
-                                                 state->camera_parameters.annotate_y
-                                                );
-                    free(text);
-                 }
-                 else
-                    raspicamcontrol_set_annotate(state->camera_component, state->camera_parameters.enable_annotate,
-                                                 state->camera_parameters.annotate_string,
-                                                 state->camera_parameters.annotate_text_size,
-                                                 state->camera_parameters.annotate_text_colour,
-                                                 state->camera_parameters.annotate_bg_colour,
-                                                 state->camera_parameters.annotate_justify,
-                                                 state->camera_parameters.annotate_x,
-                                                 state->camera_parameters.annotate_y
-                                                );
-              }
-
-              if (state->common_settings.verbose)
-                 fprintf(stderr, "Starting capture %d\n", frame);
-
-              if (mmal_port_parameter_set_boolean(camera_still_port, MMAL_PARAMETER_CAPTURE, 1) != MMAL_SUCCESS)
-              {
-                 vcos_log_error("%s: Failed to start capture", __func__);
-              }
-              else
-              {
-                 // Wait for capture to complete
-                 // For some reason using vcos_semaphore_wait_timeout sometimes returns immediately with bad parameter error
-                 // even though it appears to be all correct, so reverting to untimed one until figure out why its erratic
-                 vcos_semaphore_wait(&callback_data.complete_semaphore);
-                 if (state->common_settings.verbose)
-                    fprintf(stderr, "Finished capture %d\n", frame);
-              }
-
-              // Ensure we don't die if get callback with no open file
-              callback_data.file_handle = NULL;
-
-              if (output_file != stdout)
-              {
-                 rename_file(state, output_file, final_filename, use_filename, frame);
-              }
-              else
-              {
-                 fflush(output_file);
-              }
-              // Disable encoder output port
-              status = mmal_port_disable(encoder_output_port);
-           }
-
-           if (use_filename)
-           {
-              free(use_filename);
-              use_filename = NULL;
-           }
-           if (final_filename)
-           {
-              free(final_filename);
-              final_filename = NULL;
-           }
-        } // end for (frame)
-
-        vcos_semaphore_delete(&callback_data.complete_semaphore);
-     }
+    vcos_semaphore_delete(&callback_data.complete_semaphore);
     /**********************************/
 error:
      vcos_log_error ( "Foo" );
