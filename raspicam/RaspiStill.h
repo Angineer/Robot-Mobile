@@ -98,6 +98,7 @@ typedef struct
    FILE *file_handle;                   /// File handle to write buffer data to.
    VCOS_SEMAPHORE_T complete_semaphore; /// semaphore which is posted when we reach end of frame (indicates end of capture or fault)
    RASPISTILL_STATE *pstate;            /// pointer to our state in case required in callback
+   void* im_buffer;                     /// image buffer to which data will be written
 } PORT_USERDATA;
 
 static void store_exif_tag(RASPISTILL_STATE *state, const char *exif_tag);

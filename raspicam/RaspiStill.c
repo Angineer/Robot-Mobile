@@ -479,7 +479,7 @@ int parse_cmdline(int argc, const char **argv, RASPISTILL_STATE *state)
    return 0;
 }
 
-void encoder_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
+void encoder_buffer_callback ( MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer )
 {
    int complete = 0;
 
@@ -495,7 +495,8 @@ void encoder_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
       {
          mmal_buffer_header_mem_lock(buffer);
 
-         bytes_written = fwrite(buffer->data, 1, buffer->length, pData->file_handle);
+         memcpy ( pData->im_buffer, buffer, buffer->length );
+         //bytes_written = fwrite(buffer->data, 1, buffer->length, pData->file_handle);
 
          mmal_buffer_header_mem_unlock(buffer);
       }

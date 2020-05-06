@@ -15,4 +15,4 @@ void destroyCam ( RASPISTILL_STATE* state );
 /*!
  * @brief Capture a frame from the camera and save it to memeory
  */
-void capture ( RASPISTILL_STATE* state );
+void capture ( RASPISTILL_STATE* state, void* im_buffer );
