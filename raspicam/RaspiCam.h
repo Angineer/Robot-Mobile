@@ -5,7 +5,7 @@
  *        same command line arguments as the raspistill app, if you feel so
  *        inclined.
  */
-RASPISTILL_STATE* createCam ( int argc, const char** argv );
+RASPISTILL_STATE* createCam();
 
 /*!
  * @brief Clean up a camera object

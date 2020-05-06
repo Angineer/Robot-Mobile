@@ -479,7 +479,7 @@ int parse_cmdline(int argc, const char **argv, RASPISTILL_STATE *state)
    return 0;
 }
 
-void encoder_buffer_callback ( MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer )
+void camera_buffer_callback ( MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer )
 {
    int complete = 0;
 

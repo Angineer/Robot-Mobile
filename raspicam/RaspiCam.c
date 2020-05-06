@@ -8,11 +8,10 @@
 #define _GNU_SOURCE
 #endif
 
-RASPISTILL_STATE* createCam ( int argc, const char** argv )
+RASPISTILL_STATE* createCam()
 {
     // Our main data storage vessel..
     RASPISTILL_STATE* state = (RASPISTILL_STATE*) malloc (sizeof(RASPISTILL_STATE));
-    //int exit_code = EX_OK;
 
     MMAL_STATUS_T status = MMAL_SUCCESS;
     MMAL_PORT_T *camera_preview_port = NULL;
@@ -25,112 +24,25 @@ RASPISTILL_STATE* createCam ( int argc, const char** argv )
     // Register our application with the logging system
     vcos_log_register("RaspiStill", VCOS_LOG_CATEGORY);
 
+    // Set signal handlers. We won't be using the USR signals.
     signal(SIGINT, default_signal_handler);
-
-    // Disable USR1 and USR2 for the moment - may be reenabled if go in to signal capture mode
     signal(SIGUSR1, SIG_IGN);
     signal(SIGUSR2, SIG_IGN);
 
-    //set_app_name(argv[0]);
-
-    // Do we have any parameters
-    if (argc == 1)
-    {
-       display_valid_parameters(basename(argv[0]), &application_help_message);
-       exit(EX_USAGE);
-    }
- 
     default_status(state);
  
-    // Parse the command line and put options in to our status structure
-    if (parse_cmdline(argc, argv, state))
-    {
-       exit(EX_USAGE);
-    }
-
-    // Run forever by default
-    if (state->timeout == -1)
-       state->timeout = 0;
-
     // Setup for sensor specific parameters
     get_sensor_defaults(state->common_settings.cameraNum, state->common_settings.camera_name,
                         &state->common_settings.width, &state->common_settings.height);
 
-    if (state->common_settings.verbose)
-    {
-       print_app_details(stderr);
-       dump_status(state);
-    }
+    print_app_details(stderr);
 
-    //if (state->common_settings.gps)
-    //{
-       //if (raspi_gps_setup(state->common_settings.verbose))
-          //state->common_settings.gps = false;
-    //}
-
-    if (state->useGL)
-       raspitex_init(&state->raspitex_state);
-
-    // OK, we have a nice set of parameters. Now set up our components
-    // We have three components. Camera, Preview and encoder.
-    // Camera and encoder are different in stills/video, but preview
-    // is the same so handed off to a separate module
-
+    // Set up the MMAL camera component
     if ((status = create_camera_component(state)) != MMAL_SUCCESS)
     {
        vcos_log_error("%s: Failed to create camera component", __func__);
-       //exit_code = EX_SOFTWARE;
+       free ( state );
        return NULL;
-    }
-    else if ((!state->useGL) && (status = raspipreview_create(&state->preview_parameters)) != MMAL_SUCCESS)
-    {
-       vcos_log_error("%s: Failed to create preview component", __func__);
-       destroy_camera_component(state);
-       //exit_code = EX_SOFTWARE;
-       return NULL;
-    }
-    else if ((status = create_encoder_component(state)) != MMAL_SUCCESS)
-    {
-       vcos_log_error("%s: Failed to create encode component", __func__);
-       raspipreview_destroy(&state->preview_parameters);
-       destroy_camera_component(state);
-       //exit_code = EX_SOFTWARE;
-       return NULL;
-    }
-   
-    if (state->common_settings.verbose)
-        fprintf(stderr, "Starting component connection stage\n");
-
-    if (! state->useGL)
-    {
-        if (state->common_settings.verbose)
-            fprintf(stderr, "Connecting camera preview port to video render.\n");
-
-        // Note we are lucky that the preview and null sink components use the same input port
-        // so we can simple do this without conditionals
-        preview_input_port  = state->preview_parameters.preview_component->input[0];
-
-        // Connect camera to preview (which might be a null_sink if no preview required)
-        status = connect_ports(camera_preview_port, preview_input_port, &state->preview_connection);
-    }
-
-    if (status != MMAL_SUCCESS)
-    {
-        mmal_status_to_int(status);
-        vcos_log_error("%s: Failed to connect camera to preview", __func__);
-        // TODO
-    }
-
-    if (state->common_settings.verbose)
-        fprintf(stderr, "Connecting camera stills port to encoder input port\n");
-
-    // Now connect the camera to the encoder
-    status = connect_ports(camera_still_port, encoder_input_port, &state->encoder_connection);
-
-    if (status != MMAL_SUCCESS)
-    {
-        vcos_log_error("%s: Failed to connect camera video port to encoder input", __func__);
-        // TODO
     }
 
    return state;
@@ -188,14 +100,10 @@ void destroyCam ( RASPISTILL_STATE* state ) {
 
 void capture ( RASPISTILL_STATE* state, void* im_buffer ) {
     MMAL_STATUS_T status = MMAL_SUCCESS;
-    MMAL_PORT_T *camera_still_port = NULL;
-    MMAL_PORT_T *encoder_output_port = NULL;
-
     PORT_USERDATA callback_data;
     VCOS_STATUS_T vcos_status;
 
-    camera_still_port   = state->camera_component->output[MMAL_CAMERA_CAPTURE_PORT];
-    encoder_output_port = state->encoder_component->output[0];
+    MMAL_PORT_T* camera_still_port = state->camera_component->output[MMAL_CAMERA_CAPTURE_PORT];
 
     // Set up our userdata - this is passed though to the callback where we need the information.
     callback_data.im_buffer = im_buffer;
@@ -204,27 +112,29 @@ void capture ( RASPISTILL_STATE* state, void* im_buffer ) {
 
     vcos_assert(vcos_status == VCOS_SUCCESS);
 
-    /**********************************/
     // Capture a single image
     int frame = state->frameStart - 1;
 
     // Disable stuff we aren't going to use
     mmal_port_parameter_set_boolean(
-        state->encoder_component->output[0], MMAL_PARAMETER_EXIF_DISABLE, 1);
-    mmal_port_parameter_set_boolean(
         camera_still_port, MMAL_PARAMETER_ENABLE_RAW_CAPTURE, 0);
 
     // There is a possibility that shutter needs to be set each loop.
-    if (mmal_status_to_int(mmal_port_parameter_set_uint32(state->camera_component->control, MMAL_PARAMETER_SHUTTER_SPEED, state->camera_parameters.shutter_speed)) != MMAL_SUCCESS)
+    if ( mmal_status_to_int (
+            mmal_port_parameter_set_uint32 (
+                state->camera_component->control,
+                MMAL_PARAMETER_SHUTTER_SPEED,
+                state->camera_parameters.shutter_speed ) ) != MMAL_SUCCESS ) {
        vcos_log_error("Unable to set shutter speed");
+    }
 
-    // Enable the encoder output port and tell it its callback function
-    fprintf(stderr, "Enabling encoder output port\n");
+    // Enable the camera output port and tell it its callback function
+    fprintf(stderr, "Enabling camera output port\n");
 
-    encoder_output_port->userdata = (struct MMAL_PORT_USERDATA_T *)&callback_data;
-    status = mmal_port_enable(encoder_output_port, encoder_buffer_callback);
+    camera_still_port->userdata = (struct MMAL_PORT_USERDATA_T *)&callback_data;
+    status = mmal_port_enable(camera_still_port, camera_buffer_callback);
 
-    // Send all the buffers to the encoder output port
+    // Send all the buffers to the camera output port
     int num = mmal_queue_length(state->encoder_pool->queue);
 
     for (int q=0; q<num; q++)
@@ -234,8 +144,8 @@ void capture ( RASPISTILL_STATE* state, void* im_buffer ) {
        if (!buffer)
           vcos_log_error("Unable to get a required buffer %d from pool queue", q);
 
-       if (mmal_port_send_buffer(encoder_output_port, buffer)!= MMAL_SUCCESS)
-          vcos_log_error("Unable to send a buffer to encoder output port (%d)", q);
+       if (mmal_port_send_buffer(camera_still_port, buffer)!= MMAL_SUCCESS)
+          vcos_log_error("Unable to send a buffer to camera output port (%d)", q);
     }
 
     fprintf(stderr, "Starting capture %d\n", frame);
@@ -256,12 +166,7 @@ void capture ( RASPISTILL_STATE* state, void* im_buffer ) {
     }
 
     // Clean up
-    status = mmal_port_disable(encoder_output_port);
+    status = mmal_port_disable(camera_still_port);
     vcos_semaphore_delete(&callback_data.complete_semaphore);
-
-    /**********************************/
-error:
-     vcos_log_error ( "Foo" );
-     // TODO
 }
 

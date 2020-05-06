@@ -217,14 +217,14 @@ void application_help_message(char *app_name);
 int parse_cmdline(int argc, const char **argv, RASPISTILL_STATE *state);
 
 /**
- *  buffer header callback function for encoder
+ *  buffer header callback function for camera
  *
- *  Callback will dump buffer data to the specific file
+ *  Callback will dump buffer data to the specific image buffer
  *
  * @param port Pointer to port from which callback originated
  * @param buffer mmal buffer header pointer
  */
-void encoder_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
+void camera_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
 
 /**
  * Create the camera component, set up its ports
