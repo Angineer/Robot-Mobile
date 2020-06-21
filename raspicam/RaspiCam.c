@@ -130,9 +130,8 @@ void capture ( struct RASPISTILL_STATE* state, void* im_buffer ) {
     }
 
     // Enable the camera output port and tell it its callback function
-    fprintf(stderr, "Enabling camera output port\n");
-
     camera_still_port->userdata = (struct MMAL_PORT_USERDATA_T *)&callback_data;
+
     status = mmal_port_enable(camera_still_port, camera_buffer_callback);
 
     // Send all the buffers to the camera output port
@@ -159,12 +158,14 @@ void capture ( struct RASPISTILL_STATE* state, void* im_buffer ) {
     else
     {
        // Wait for capture to complete
-       // For some reason using vcos_semaphore_wait_timeout sometimes returns immediately with bad parameter error
-       // even though it appears to be all correct, so reverting to untimed one until figure out why its erratic
+       // For some reason using vcos_semaphore_wait_timeout sometimes returns
+       // immediately with bad parameter error even though it appears to be all
+       // correct, so reverting to untimed one until figure out why its erratic
        vcos_semaphore_wait(&callback_data.complete_semaphore);
        if (state->common_settings.verbose)
           fprintf(stderr, "Finished capture %d\n", frame);
     }
+    fprintf(stderr, "Finished capture %d\n", frame);
 
     // Clean up
     status = mmal_port_disable(camera_still_port);

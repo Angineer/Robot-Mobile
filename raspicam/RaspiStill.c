@@ -739,6 +739,19 @@ MMAL_STATUS_T create_camera_component(RASPISTILL_STATE *state)
    if (still_port->buffer_num < VIDEO_OUTPUT_BUFFERS_NUM)
       still_port->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;
 
+   /* Create pool of buffer headers for the output port to consume */
+   MMAL_POOL_T* pool = mmal_port_pool_create ( still_port,
+                                               still_port->buffer_num,
+                                               still_port->buffer_size);
+
+    if (!pool)
+    {
+        vcos_log_error("Failed to create buffer header pool for encoder output port %s",
+                       still_port->name);
+    }
+
+    state->encoder_pool = pool;
+
    /* Enable component */
    status = mmal_component_enable(camera);
 
@@ -760,8 +773,7 @@ MMAL_STATUS_T create_camera_component(RASPISTILL_STATE *state)
 
    state->camera_component = camera;
 
-   if (state->common_settings.verbose)
-      fprintf(stderr, "Camera component done\n");
+   fprintf(stderr, "Created camera component\n");
 
    return status;
 

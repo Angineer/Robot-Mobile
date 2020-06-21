@@ -3,7 +3,7 @@
 #include <tag16h5.h>
 #include <iostream>
 
-ImageChecker::ImageChecker ( std::shared_ptr<ImageBuffer> buffer,
+ImageChecker::ImageChecker ( image_u8_t* buffer,
                              std::function<void ( int )> callback ) :
     m_Buffer ( buffer ),
     m_StopFlag ( false ),
@@ -44,14 +44,11 @@ void ImageChecker::checkForTags ( std::function<void ( int )> callback )
         m_ReadyFlag = false;
         lock.unlock();
 
-        // Read image
-        auto img = m_Buffer->getImage();
-
         // Check for apriltags
         int tag_id { -1 };
         //td->qtp.min_white_black_diff = 10;
         zarray_t *detections =
-            apriltag_detector_detect ( m_Detector, img );
+            apriltag_detector_detect ( m_Detector, m_Buffer );
 
         for (int i = 0; i < zarray_size(detections); i++) {
             apriltag_detection_t *det;

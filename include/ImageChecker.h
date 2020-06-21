@@ -16,7 +16,7 @@ public:
      // Constructor
      // @param callback A callback function to call when an apriltag is
      //        detected in the image
-    ImageChecker ( std::shared_ptr<ImageBuffer> buffer,
+    ImageChecker ( image_u8_t* buffer,
                    std::function<void ( int )> callback );
 
     // Destructor
@@ -41,7 +41,7 @@ private:
     std::atomic<bool> m_StopFlag;
 
     // The buffer where the image data are stored
-    std::shared_ptr<ImageBuffer> m_Buffer;
+    image_u8_t* m_Buffer;
 
     // Objects for notifying that that there are new image data ready
     std::mutex m_Mutex;

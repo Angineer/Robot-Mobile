@@ -16,8 +16,7 @@ MobileManager::MobileManager() :
     arduino ( "/dev/ttyACM0" ),
     state ( State::IDLE ),
     server ( SocketType::BLUETOOTH ),
-    fetcher ( "/home/pi/camera.bmp",
-              [ this ] ( int id ) {
+    fetcher ( [ this ] ( int id ) {
                   this->handle_cam_update ( id );
               } )
 {
