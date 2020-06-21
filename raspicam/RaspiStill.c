@@ -481,63 +481,62 @@ int parse_cmdline(int argc, const char **argv, RASPISTILL_STATE *state)
 
 void camera_buffer_callback ( MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer )
 {
-   int complete = 0;
+    int complete = 0;
 
-   // We pass our file handle and other stuff in via the userdata field.
+    // We pass our file handle and other stuff in via the userdata field.
+    PORT_USERDATA *pData = (PORT_USERDATA *)port->userdata;
 
-   PORT_USERDATA *pData = (PORT_USERDATA *)port->userdata;
+    if (pData) {
+        if (buffer->length && pData->im_buffer)
+        {
+            // These are passed in manually because we're writing directly to
+            // the Apriltag image buffer, which has to have a specific size
+            int width = pData->img_width;
+            int height = pData->img_height;
+            int stride = pData->img_stride;
 
-   if (pData)
-   {
-      int bytes_written = buffer->length;
+            mmal_buffer_header_mem_lock(buffer);
 
-      if (buffer->length && pData->file_handle)
-      {
-         mmal_buffer_header_mem_lock(buffer);
+            for ( int line = 0; line < height; ++line ) {
+                memcpy ( pData->im_buffer + line * stride,
+                         buffer->data + line * width,
+                         width );
+            }
+            // memcpy ( pData->im_buffer, buffer->data, buffer->length );
 
-         memcpy ( pData->im_buffer, buffer, buffer->length );
-         //bytes_written = fwrite(buffer->data, 1, buffer->length, pData->file_handle);
+            mmal_buffer_header_mem_unlock(buffer);
+        }
 
-         mmal_buffer_header_mem_unlock(buffer);
-      }
-
-      // We need to check we wrote what we wanted - it's possible we have run out of storage.
-      if (bytes_written != buffer->length)
-      {
-         vcos_log_error("Unable to write buffer to file - aborting");
-         complete = 1;
-      }
-
-      // Now flag if we have completed
-      if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED))
-         complete = 1;
-   }
-   else
-   {
+        // If frame is complete, we're done
+        if ( buffer->flags & MMAL_BUFFER_HEADER_FLAG_FRAME_END ){
+            complete = 1;
+        }
+    } else {
       vcos_log_error("Received a encoder buffer callback with no state");
-   }
+    }
 
-   // release buffer back to the pool
-   mmal_buffer_header_release(buffer);
+    // release buffer back to the pool
+    mmal_buffer_header_release(buffer);
 
-   // and send one back to the port (if still open)
-   if (port->is_enabled)
-   {
-      MMAL_STATUS_T status = MMAL_SUCCESS;
-      MMAL_BUFFER_HEADER_T *new_buffer;
+    // and send one back to the port (if still open)
+    if (port->is_enabled)
+    {
+        MMAL_STATUS_T status = MMAL_SUCCESS;
+        MMAL_BUFFER_HEADER_T *new_buffer;
 
-      new_buffer = mmal_queue_get(pData->pstate->encoder_pool->queue);
+        new_buffer = mmal_queue_get(pData->pstate->encoder_pool->queue);
 
       if (new_buffer)
       {
          status = mmal_port_send_buffer(port, new_buffer);
       }
       if (!new_buffer || status != MMAL_SUCCESS)
-         vcos_log_error("Unable to return a buffer to the encoder port");
+         fprintf(stderr, "\tUnable to return a buffer to the encoder port\n" );
    }
 
-   if (complete)
-      vcos_semaphore_post(&(pData->complete_semaphore));
+    if (complete) {
+        vcos_semaphore_post(&(pData->complete_semaphore));
+    }
 }
 
 MMAL_STATUS_T create_camera_component(RASPISTILL_STATE *state)
@@ -716,8 +715,8 @@ MMAL_STATUS_T create_camera_component(RASPISTILL_STATE *state)
       };
       mmal_port_parameter_set(still_port, &fps_range.hdr);
    }
-   // Set our stills format on the stills (for encoder) port
-   format->encoding = MMAL_ENCODING_OPAQUE;
+   // Set our stills format on the stills port
+   format->encoding = MMAL_ENCODING_YV12;
    format->es->video.width = VCOS_ALIGN_UP(state->common_settings.width, 32);
    format->es->video.height = VCOS_ALIGN_UP(state->common_settings.height, 16);
    format->es->video.crop.x = 0;
@@ -779,10 +778,12 @@ MMAL_STATUS_T create_camera_component(RASPISTILL_STATE *state)
 
 error:
 
-   if (camera)
-      mmal_component_destroy(camera);
+    fprintf(stderr, "Error during camera component setup\n");
 
-   return status;
+    if (camera)
+        mmal_component_destroy(camera);
+
+    return status;
 }
 
 void destroy_camera_component(RASPISTILL_STATE *state)

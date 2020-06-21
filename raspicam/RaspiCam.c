@@ -9,39 +9,37 @@
 #define _GNU_SOURCE
 #endif
 
-struct RASPISTILL_STATE* createCam()
+struct RASPISTILL_STATE* createCam ( int width, int height )
 {
-    // Our main data storage vessel..
+    // The main data storage vessel
     RASPISTILL_STATE* state = (RASPISTILL_STATE*) malloc (sizeof(RASPISTILL_STATE));
 
     MMAL_STATUS_T status = MMAL_SUCCESS;
-    MMAL_PORT_T *camera_preview_port = NULL;
-    MMAL_PORT_T *camera_still_port = NULL;
-    MMAL_PORT_T *preview_input_port = NULL;
-    MMAL_PORT_T *encoder_input_port = NULL;
 
     bcm_host_init();
-
-    // Register our application with the logging system
-    vcos_log_register("RaspiStill", VCOS_LOG_CATEGORY);
 
     // Set signal handlers. We won't be using the USR signals.
     signal(SIGINT, default_signal_handler);
     signal(SIGUSR1, SIG_IGN);
     signal(SIGUSR2, SIG_IGN);
 
+    // Reset all camera settings to default values
     default_status(state);
  
-    // Setup for sensor specific parameters
-    get_sensor_defaults(state->common_settings.cameraNum, state->common_settings.camera_name,
-                        &state->common_settings.width, &state->common_settings.height);
+    // Set defaults for the camera hardware
+    get_sensor_defaults ( state->common_settings.cameraNum,
+                          state->common_settings.camera_name,
+                          &state->common_settings.width,
+                          &state->common_settings.height);
 
-    print_app_details(stderr);
+    // Manually configure these settings
+    state->common_settings.width = width;
+    state->common_settings.height = height;
 
     // Set up the MMAL camera component
     if ((status = create_camera_component(state)) != MMAL_SUCCESS)
     {
-       vcos_log_error("%s: Failed to create camera component", __func__);
+       fprintf(stderr, "Failed to create camera component\n");
        free ( state );
        return NULL;
     }
@@ -99,7 +97,11 @@ void destroyCam ( struct RASPISTILL_STATE* state ) {
     free ( state );
 }
 
-void capture ( struct RASPISTILL_STATE* state, void* im_buffer ) {
+void capture ( struct RASPISTILL_STATE* state,
+               void* im_buffer,
+               int width,
+               int height,
+               int stride ) {
     MMAL_STATUS_T status = MMAL_SUCCESS;
     PORT_USERDATA callback_data;
     VCOS_STATUS_T vcos_status;
@@ -109,12 +111,12 @@ void capture ( struct RASPISTILL_STATE* state, void* im_buffer ) {
     // Set up our userdata - this is passed though to the callback where we need the information.
     callback_data.im_buffer = im_buffer;
     callback_data.pstate = state;
+    callback_data.img_width = width;
+    callback_data.img_height = height;
+    callback_data.img_stride = stride;
     vcos_status = vcos_semaphore_create(&callback_data.complete_semaphore, "RaspiStill-sem", 0);
 
     vcos_assert(vcos_status == VCOS_SUCCESS);
-
-    // Capture a single image
-    int frame = state->frameStart - 1;
 
     // Disable stuff we aren't going to use
     mmal_port_parameter_set_boolean(
@@ -148,8 +150,6 @@ void capture ( struct RASPISTILL_STATE* state, void* im_buffer ) {
           vcos_log_error("Unable to send a buffer to camera output port (%d)", q);
     }
 
-    fprintf(stderr, "Starting capture %d\n", frame);
-
     // Perform the capture
     if (mmal_port_parameter_set_boolean(camera_still_port, MMAL_PARAMETER_CAPTURE, 1) != MMAL_SUCCESS)
     {
@@ -161,11 +161,8 @@ void capture ( struct RASPISTILL_STATE* state, void* im_buffer ) {
        // For some reason using vcos_semaphore_wait_timeout sometimes returns
        // immediately with bad parameter error even though it appears to be all
        // correct, so reverting to untimed one until figure out why its erratic
-       vcos_semaphore_wait(&callback_data.complete_semaphore);
-       if (state->common_settings.verbose)
-          fprintf(stderr, "Finished capture %d\n", frame);
+        vcos_semaphore_wait ( &callback_data.complete_semaphore );
     }
-    fprintf(stderr, "Finished capture %d\n", frame);
 
     // Clean up
     status = mmal_port_disable(camera_still_port);

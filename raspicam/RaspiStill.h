@@ -95,7 +95,9 @@ typedef struct RASPISTILL_STATE
  */
 typedef struct
 {
-   FILE *file_handle;                   /// File handle to write buffer data to.
+   int img_width;
+   int img_height;
+   int img_stride;
    VCOS_SEMAPHORE_T complete_semaphore; /// semaphore which is posted when we reach end of frame (indicates end of capture or fault)
    RASPISTILL_STATE *pstate;            /// pointer to our state in case required in callback
    void* im_buffer;                     /// image buffer to which data will be written

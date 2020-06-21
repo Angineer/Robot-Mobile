@@ -31,7 +31,7 @@ void MobileManager::run()
                          };
     std::cout << "Running test" << std::endl;
     using namespace std::chrono_literals;
-    std::this_thread::sleep_for ( 2s );
+    std::this_thread::sleep_for ( 4s );
     std::cout << "Test complete" << std::endl;
     //server.serve ( callback_func );
 }
