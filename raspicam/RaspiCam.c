@@ -1,5 +1,6 @@
 #include "RaspiCam.h"
 #include "RaspiGPS.h" // Defines booleans
+#include "RaspiStill.h"
 
 #include <sysexits.h>
 
@@ -8,7 +9,7 @@
 #define _GNU_SOURCE
 #endif
 
-RASPISTILL_STATE* createCam()
+struct RASPISTILL_STATE* createCam()
 {
     // Our main data storage vessel..
     RASPISTILL_STATE* state = (RASPISTILL_STATE*) malloc (sizeof(RASPISTILL_STATE));
@@ -48,7 +49,7 @@ RASPISTILL_STATE* createCam()
    return state;
 }
 
-void destroyCam ( RASPISTILL_STATE* state ) {
+void destroyCam ( struct RASPISTILL_STATE* state ) {
     MMAL_STATUS_T status = MMAL_SUCCESS;
 
     mmal_status_to_int(status);
@@ -98,7 +99,7 @@ void destroyCam ( RASPISTILL_STATE* state ) {
     free ( state );
 }
 
-void capture ( RASPISTILL_STATE* state, void* im_buffer ) {
+void capture ( struct RASPISTILL_STATE* state, void* im_buffer ) {
     MMAL_STATUS_T status = MMAL_SUCCESS;
     PORT_USERDATA callback_data;
     VCOS_STATUS_T vcos_status;

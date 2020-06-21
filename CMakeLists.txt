@@ -22,6 +22,7 @@ add_executable ( mobile_server ./src/mobile_server.cpp
                                ./src/MobileManager.cpp )
 set_property ( TARGET mobile_server PROPERTY CXX_STANDARD 14 )
 target_include_directories ( mobile_server PUBLIC ./include
+                                           PUBLIC ./raspicam
                                            PUBLIC ../robot-comm/include
                                            PUBLIC ${CEREAL_INCLUDE_FOLDER}
                                            PUBLIC ${APRILTAG_INCLUDE_FOLDER} )

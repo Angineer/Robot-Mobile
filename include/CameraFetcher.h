@@ -23,9 +23,6 @@ public:
     // Destructor
     ~CameraFetcher();
 
-    // Tell the fetcher to stop fetching images
-    void stop();
-
 private:
     // Ask the camera for an image, wait for it to be written to disk,
     // read it in, and notify the image checker

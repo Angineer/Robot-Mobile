@@ -51,7 +51,7 @@ enum
 
 /** Structure containing all state information for the current run
  */
-typedef struct
+typedef struct RASPISTILL_STATE
 {
    RASPICOMMONSETTINGS_PARAMETERS common_settings;     /// Common settings
    int timeout;                        /// Time taken before frame is grabbed and app then shuts down. Units are milliseconds

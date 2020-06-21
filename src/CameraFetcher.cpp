@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <sys/inotify.h>
 
+#include "RaspiCam.h"
 #include "ImageChecker.h"
 
 CameraFetcher::CameraFetcher ( const std::string &imagePath,
@@ -30,10 +31,11 @@ CameraFetcher::~CameraFetcher()
 {
     close ( m_Notify );
     // Signal and wait for the thread to finish up
-    m_StopFlag.store ( false );
+    m_StopFlag.store ( true );
     if ( m_Thread.joinable() ){
         m_Thread.join();
     }
+    std::cout << "CameraFetcher stopped" << std::endl;
 }
 
 void CameraFetcher::processImages ( const std::string& imagePath,
@@ -72,4 +74,5 @@ void CameraFetcher::processImages ( const std::string& imagePath,
         // Notify the april tag checker
         checker.notify();
     }
+    checker.notify();
 }

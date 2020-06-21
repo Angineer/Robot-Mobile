@@ -30,7 +30,11 @@ void MobileManager::run()
     auto callback_func = [ this ] ( std::string input ) {
                              return this->handle_input ( input );
                          };
-    server.serve ( callback_func );
+    std::cout << "Running test" << std::endl;
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for ( 2s );
+    std::cout << "Test complete" << std::endl;
+    //server.serve ( callback_func );
 }
 
 std::string MobileManager::handle_input ( const std::string& input ){
@@ -72,7 +76,7 @@ std::string MobileManager::handle_input ( const std::string& input ){
 
 void MobileManager::handle_cam_update ( int location_id )
 {
-    //std::cout << "Location update: " << location_id << std::endl;
+    std::cout << "Location update: " << location_id << std::endl;
     std::lock_guard<std::mutex> lock ( access_mutex );
 
     if ( state == State::DELIVER &&

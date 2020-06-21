@@ -23,10 +23,11 @@ ImageChecker::ImageChecker ( std::shared_ptr<ImageBuffer> buffer,
 ImageChecker::~ImageChecker()
 {
     // Signal and wait for the thread to finish up
-    m_StopFlag.store ( false );
+    m_StopFlag.store ( true );
     if ( m_Thread.joinable() ){
         m_Thread.join();
     }
+    std::cout << "ImageChecker stopped" << std::endl;
 
     // Clean up
     tag16h5_destroy ( m_Family );
