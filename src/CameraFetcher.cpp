@@ -56,9 +56,9 @@ void CameraFetcher::processImages ( std::function<void ( int )> callback )
         image_u8_write_pnm ( buffer, "debug.pnm" );
 
         // Notify the april tag checker
-        //checker.notify();
+        checker.notify();
     }
-    //checker.notify();
+    checker.notify();
 
     image_u8_destroy ( buffer );
     destroyCam ( camera );

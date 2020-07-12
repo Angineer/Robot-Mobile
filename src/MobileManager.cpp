@@ -29,11 +29,7 @@ void MobileManager::run()
     auto callback_func = [ this ] ( std::string input ) {
                              return this->handle_input ( input );
                          };
-    std::cout << "Running test" << std::endl;
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for ( 4s );
-    std::cout << "Test complete" << std::endl;
-    //server.serve ( callback_func );
+    server.serve ( callback_func );
 }
 
 std::string MobileManager::handle_input ( const std::string& input ){
