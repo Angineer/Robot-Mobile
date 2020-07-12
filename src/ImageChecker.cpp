@@ -20,7 +20,7 @@ ImageChecker::ImageChecker ( image_u8_t* buffer,
     // Default = 2.0.
     m_Detector->quad_decimate = 2.0;
     // Higher values require better contrast. Range 0-255. Default = 5.
-    m_Detector->qtp.min_white_black_diff = 10;
+    m_Detector->qtp.min_white_black_diff = 5;
 
     // Start checking
     auto checkFunc = [ callback, this ] {
@@ -58,6 +58,7 @@ void ImageChecker::checkForTags ( std::function<void ( int )> callback )
         zarray_t *detections =
             apriltag_detector_detect ( m_Detector, m_Buffer );
 
+        float best_margin = 0;
         for (int i = 0; i < zarray_size(detections); i++) {
             apriltag_detection_t *det;
             zarray_get(detections, i, &det);
@@ -71,7 +72,9 @@ void ImageChecker::checkForTags ( std::function<void ( int )> callback )
             }
 
             // Do stuff with detections here.
-            if ( det->decision_margin > 1.5 ) {
+            if ( det->decision_margin > 5.0
+                 && det->decision_margin > best_margin ) {
+                best_margin = det->decision_margin;
                 tag_id = det->id;
             }
             apriltag_detection_destroy ( det );
@@ -81,7 +84,9 @@ void ImageChecker::checkForTags ( std::function<void ( int )> callback )
 
         // If we found one, let the MobileManager know
         if ( tag_id != -1 ){
-            std::cout << "ID detected: " << tag_id << std::endl;
+            if ( DEBUG ) {
+                std::cout << "ID detected: " << tag_id << std::endl;
+            }
             callback ( tag_id );
         }
     }

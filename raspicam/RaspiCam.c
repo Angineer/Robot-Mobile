@@ -44,8 +44,9 @@ struct RASPISTILL_STATE* createCam ( int width, int height )
        return NULL;
     }
 
-    // Configure tuning parameters
-    MMAL_RATIONAL_T brightness_v = {53, 100};
+    // Camera-level tuning parameters
+    /*
+    MMAL_RATIONAL_T brightness_v = {50, 100};
     mmal_port_parameter_set_rational ( state->camera_component->control,
                                        MMAL_PARAMETER_BRIGHTNESS,
                                        brightness_v );
@@ -53,8 +54,29 @@ struct RASPISTILL_STATE* createCam ( int width, int height )
     mmal_port_parameter_set_rational ( state->camera_component->control,
                                        MMAL_PARAMETER_CONTRAST,
                                        contrast_v );
+    mmal_port_parameter_set_uint32 ( state->camera_component->control,
+                                     MMAL_PARAMETER_ISO,
+                                     800 );
+    MMAL_PARAMETER_EXPOSUREMODE_T exp_mode = { { MMAL_PARAMETER_EXPOSURE_MODE,
+                                                 sizeof(exp_mode) },
+                                               MMAL_PARAM_EXPOSUREMODE_AUTO };
+    mmal_port_parameter_set ( state->camera_component->control,
+                              &exp_mode.hdr );
+    */
 
-   return state;
+    MMAL_RATIONAL_T rational = {0,65536};
+
+    rational.num = (unsigned int)(5.0 * 65536);
+    mmal_port_parameter_set_rational ( state->camera_component->control,
+                                       MMAL_PARAMETER_ANALOG_GAIN,
+                                       rational );
+
+    rational.num = (unsigned int)(3.0 * 65536);
+    mmal_port_parameter_set_rational ( state->camera_component->control,
+                                       MMAL_PARAMETER_DIGITAL_GAIN,
+                                       rational );
+
+    return state;
 }
 
 void destroyCam ( struct RASPISTILL_STATE* state ) {
