@@ -44,6 +44,16 @@ struct RASPISTILL_STATE* createCam ( int width, int height )
        return NULL;
     }
 
+    // Configure tuning parameters
+    MMAL_RATIONAL_T brightness_v = {53, 100};
+    mmal_port_parameter_set_rational ( state->camera_component->control,
+                                       MMAL_PARAMETER_BRIGHTNESS,
+                                       brightness_v );
+    MMAL_RATIONAL_T contrast_v = {0, 100};
+    mmal_port_parameter_set_rational ( state->camera_component->control,
+                                       MMAL_PARAMETER_CONTRAST,
+                                       contrast_v );
+
    return state;
 }
 

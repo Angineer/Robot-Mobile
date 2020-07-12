@@ -7,6 +7,8 @@
 #include "ImageChecker.h"
 #include "MobileConfiguration.h"
 
+#define DEBUG 1
+
 extern "C"
 {
     #include "RaspiCam.h"
@@ -53,7 +55,9 @@ void CameraFetcher::processImages ( std::function<void ( int )> callback )
         // Read image into the buffer
         capture ( camera, buffer->buf, width, height, stride );
 
-        image_u8_write_pnm ( buffer, "debug.pnm" );
+        if ( DEBUG ) {
+            image_u8_write_pnm ( buffer, "debug.pnm" );
+        }
 
         // Notify the april tag checker
         checker.notify();
