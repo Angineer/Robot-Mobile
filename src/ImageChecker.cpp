@@ -3,6 +3,8 @@
 #include <tag16h5.h>
 #include <iostream>
 
+#define DEBUG 0
+
 ImageChecker::ImageChecker ( image_u8_t* buffer,
                              std::function<void ( int )> callback ) :
     m_Buffer ( buffer ),
@@ -12,6 +14,13 @@ ImageChecker::ImageChecker ( image_u8_t* buffer,
     m_Detector = apriltag_detector_create();
     m_Family = tag16h5_create();
     apriltag_detector_add_family ( m_Detector, m_Family );
+
+    // Detector tuning parameters
+    // Higher values improve speed at the cost of range/resolution.
+    // Default = 2.0.
+    m_Detector->quad_decimate = 2.0;
+    // Higher values require better contrast. Range 0-255. Default = 5.
+    m_Detector->qtp.min_white_black_diff = 10;
 
     // Start checking
     auto checkFunc = [ callback, this ] {
@@ -46,7 +55,6 @@ void ImageChecker::checkForTags ( std::function<void ( int )> callback )
 
         // Check for apriltags
         int tag_id { -1 };
-        //td->qtp.min_white_black_diff = 10;
         zarray_t *detections =
             apriltag_detector_detect ( m_Detector, m_Buffer );
 
@@ -54,8 +62,16 @@ void ImageChecker::checkForTags ( std::function<void ( int )> callback )
             apriltag_detection_t *det;
             zarray_get(detections, i, &det);
 
+            // Detection debugging info
+            if ( DEBUG ) {
+                std::cout << "Detection info:"
+                          << " id=" << det->id
+                          << " margin=" << det->decision_margin
+                          << std::endl;
+            }
+
             // Do stuff with detections here.
-            if ( det->decision_margin > 70 ) {
+            if ( det->decision_margin > 1.5 ) {
                 tag_id = det->id;
             }
             apriltag_detection_destroy ( det );
