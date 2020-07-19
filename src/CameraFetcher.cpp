@@ -7,7 +7,7 @@
 #include "ImageChecker.h"
 #include "MobileConfiguration.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 extern "C"
 {

@@ -72,7 +72,7 @@ void ImageChecker::checkForTags ( std::function<void ( int )> callback )
             }
 
             // Do stuff with detections here.
-            if ( det->decision_margin > 5.0
+            if ( det->decision_margin > 25.0
                  && det->decision_margin > best_margin ) {
                 best_margin = det->decision_margin;
                 tag_id = det->id;
