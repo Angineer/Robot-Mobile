@@ -10,7 +10,9 @@
 #include "cereal/types/string.hpp"
 #include "cereal/types/map.hpp"
 
+#include "Command.h"
 #include "MobileConfiguration.h"
+#include "Order.h"
 
 MobileManager::MobileManager() :
     arduino ( "/dev/ttyACM0" ),
@@ -38,29 +40,20 @@ std::string MobileManager::handle_input ( const std::string& input ){
 
     char type = input[0];
     if ( type == 'c' ){
-        std::string command = input.substr(1, std::string::npos);
-        if ( command == "status" ) {
+        Command command { input };
+        if ( command.get_command() == "status" ) {
             std::lock_guard<std::mutex> lock ( access_mutex );
             response = stateToString ( state );
         }
     } else if ( type == 'o' ) {
         // Read in new order so Robie knows where he's headed
-        std::string order = input.substr ( 1, std::string::npos );
-        std::stringstream ss ( order );
-        std::map<std::string, int> items;
-        std::string destinationStr;
-
-        {
-            cereal::BinaryInputArchive iarchive ( ss ); // Create an input archive
-            iarchive ( destinationStr, items ); // Read the data from the archive
-        }
+        Order order ( input );
 
         std::lock_guard<std::mutex> lock ( access_mutex );
-        destination = config.getConfig<int> ( destinationStr + "_id" );
+        destination = order.get_location();
 
         std::cout << "New order received; headed to "
-                  << destinationStr << " (" << destination << ")"
-                  << std::endl;
+                  << destination << std::endl;
 
         state = State::DELIVER;
         arduino.sendByte ( 'd' ); // drive

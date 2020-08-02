@@ -23,7 +23,8 @@ add_executable ( mobile_server ./src/mobile_server.cpp
 set_property ( TARGET mobile_server PROPERTY CXX_STANDARD 14 )
 target_include_directories ( mobile_server PUBLIC ./include
                                            PUBLIC ./raspicam
-                                           PUBLIC ../robot-comm/include
+                                           PUBLIC ../robot-comm/core
+                                           PUBLIC ../robot-comm/msgs
                                            PUBLIC ${CEREAL_INCLUDE_FOLDER}
                                            PUBLIC ${APRILTAG_INCLUDE_FOLDER} )
 target_link_libraries ( mobile_server raspistill robot-comm ${CMAKE_THREAD_LIBS_INIT} apriltag )
