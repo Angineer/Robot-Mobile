@@ -28,3 +28,5 @@ target_include_directories ( mobile_server PUBLIC ./include
                                            PUBLIC ${CEREAL_INCLUDE_FOLDER}
                                            PUBLIC ${APRILTAG_INCLUDE_FOLDER} )
 target_link_libraries ( mobile_server raspistill robot-comm ${CMAKE_THREAD_LIBS_INIT} apriltag )
+
+install ( TARGETS mobile_server RUNTIME DESTINATION /usr/bin/ )

@@ -57,3 +57,5 @@ set ( OTHER_LIBS /opt/vc/lib/libbcm_host.so
 target_include_directories ( raspistill PUBLIC ${PROJECT_SOURCE_DIR}
                                                /opt/vc/include )
 target_link_libraries ( raspistill ${MMAL_LIBS} ${OTHER_LIBS} )
+
+install ( TARGETS raspistill LIBRARY DESTINATION /usr/lib )
