@@ -25,7 +25,7 @@
 #define RIGHT_BACK_PIN 2
 #define LEFT_FWD_PIN   5
 #define LEFT_BACK_PIN  4
-#define MAX_SPEED 80 // Max speed for forward driving, 0-255
+#define MAX_SPEED 100 // Max speed for forward driving, 0-255
 
 // Eyeball sensor
 #define LOOK_PIN 11
@@ -40,7 +40,11 @@
 
 /*** Global vars ***/
 // The high-level instruction from the raspberry pi about what we should be
-// doing. 'h' = halt, 'd' = drive
+// doing:
+// 'h' = halt
+// 'd' = drive
+// 'a' = perform auto-docking procedure
+// 'b' = perform auto-un-docking procedure
 char directive { 'h' };
 
 // Line sensor variables
@@ -111,6 +115,19 @@ void loop(){
         float angular = -linePos / 127;
 
         drive ( linear, angular );
+    } else if ( directive == 'a' ) { // Auto-docking sequence
+        driveStop();
+        delay ( 100 );
+        drive ( -1.0, 0.0 );
+        delay ( 1400 );
+        driveStop();
+        directive = 'h';
+    } else if ( directive == 'b' ) { // Auto-un-docking sequence
+        driveStop();
+        delay ( 100 );
+        drive ( 1.0, 0.0 );
+        delay ( 2000 );
+        driveStop();
     }
 
     // Don't let the loop run too fast
@@ -179,7 +196,6 @@ void rotateEyeballServo ( int pos )
  */
 void drive ( float linearSpeed, float angularSpeed )
 {
-    bool sign = linearSpeed >= 0;
     float leftSpeed, rightSpeed;
 
     if ( angularSpeed >= 0 ) {
@@ -196,10 +212,12 @@ void drive ( float linearSpeed, float angularSpeed )
         analogWrite ( RIGHT_FWD_PIN, linearSpeed * rightSpeed );
         digitalWrite ( RIGHT_BACK_PIN, LOW );
     } else {
+        // Caution: the motors require a minimum signal to run in reverse,
+        // so speed won't be affected by the value of linearSpeed
         digitalWrite ( LEFT_FWD_PIN, LOW );
-        analogWrite ( LEFT_BACK_PIN, -linearSpeed * leftSpeed );
+        analogWrite ( LEFT_BACK_PIN, 180 );
         digitalWrite ( RIGHT_FWD_PIN, LOW );
-        analogWrite ( RIGHT_BACK_PIN, -linearSpeed * rightSpeed );
+        analogWrite ( RIGHT_BACK_PIN, 180 );
     }
 }
 

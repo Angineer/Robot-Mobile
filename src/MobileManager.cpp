@@ -56,6 +56,7 @@ std::string MobileManager::handle_input ( const std::string& input ){
                   << destination << std::endl;
 
         state = State::DELIVER;
+        arduino.sendByte ( 'b' ); // undock
         arduino.sendByte ( 'd' ); // drive
     }
 
@@ -79,8 +80,9 @@ void MobileManager::handle_cam_update ( int location_id )
     } else if ( state == State::RETURN &&
                 location_id == config.getConfig<int> ( "home_id" ) ) {
         // If we are on our way back from a delivery and have arrived at home,
-        // stop and await new instructions
-        arduino.sendByte ( 'h' );
+        // perform the auto-docking procedure, then stop and await new
+        // instructions
+        arduino.sendByte ( 'a' );
         state = State::IDLE;
     }
 
